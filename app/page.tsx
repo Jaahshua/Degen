@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Tooltip } from 'chart.js';
 import { TrendingUp, Zap, Wallet, Search, ArrowUpRight } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip);
 
@@ -14,21 +13,27 @@ const TOP_COLLECTIONS = [
   { slug: 'pudgypenguins', ticker: 'PUDGY', name: 'Pudgy Penguins' },
   { slug: 'azuki', ticker: 'AZUKI', name: 'Azuki' },
   { slug: 'doodles-official', ticker: 'DOODLE', name: 'Doodles' },
-  { slug: 'clone-x', ticker: 'CLONEX', name: 'Clone X' },
 ];
 
 export default function DegenSea() {
   const [selected, setSelected] = useState(TOP_COLLECTIONS[0]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
-  const { data: stats, isLoading } = useQuery({
-    queryKey: ['opensea', selected.slug],
-    queryFn: async () => {
-      const res = await fetch(`https://api.opensea.io/api/v2/collections/${selected.slug}/stats`);
-      return res.ok ? res.json() : { total: { floor_price: 42.5, volume: 1234, num_owners: 4567 } };
-    },
-    refetchInterval: 30000,
-  });
+  useEffect(() => {
+    setLoading(true);
+    fetch(`https://api.opensea.io/api/v2/collections/${selected.slug}/stats`)
+      .then(res => res.json())
+      .then(data => {
+        setStats(data);
+        setLoading(false);
+      })
+      .catch(() => {
+        setStats({ total: { floor_price: 42.5, volume: 12345, num_owners: 5678 } });
+        setLoading(false);
+      });
+  }, [selected]);
 
   const floor = stats?.total?.floor_price || 42.5;
 
@@ -44,10 +49,11 @@ export default function DegenSea() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-[#f5f5dc] font-mono">
+      {/* Header */}
       <header className="border-b border-[#6b21a8] px-8 py-5 flex justify-between items-center bg-black/90">
         <div className="flex items-center gap-4">
           <div className="text-5xl font-black tracking-tighter terminal-purple">DEGEN<span className="terminal-teal">SEA</span></div>
-          <div className="text-xs px-4 py-2 border border-teal-400/50 text-teal-400 rounded">ETH • PURE SPECULATION</div>
+          <div className="text-xs px-4 py-2 border border-teal-400/50 text-teal-400 rounded">ETH • PURE DEGEN MODE</div>
         </div>
 
         <div className="flex items-center gap-4">
@@ -82,18 +88,9 @@ export default function DegenSea() {
               <div className="text-sm text-gray-400">{c.name}</div>
             </div>
           ))}
-
-          <div className="mt-12">
-            <div className="text-purple-400 flex items-center gap-2 mb-4">
-              <Zap size={20} /> NEW DROPS
-            </div>
-            <div className="p-6 border border-dashed border-purple-800 text-sm opacity-70">
-              Live trending mints & launches — coming v0.2
-            </div>
-          </div>
         </div>
 
-        {/* Main Area */}
+        {/* Main Chart */}
         <div className="flex-1 p-10 flex flex-col">
           <div className="flex justify-between items-end mb-8">
             <div>
@@ -102,7 +99,7 @@ export default function DegenSea() {
             </div>
             <div className="text-right">
               <div className="text-7xl font-mono terminal-teal">
-                {isLoading ? '—.——' : floor.toFixed(2)} ETH
+                {loading ? '—.——' : floor.toFixed(2)} ETH
               </div>
               <div className="flex items-center gap-1 justify-end text-emerald-400 text-xl">
                 <ArrowUpRight size={22} /> +6.8% 24H
@@ -112,25 +109,6 @@ export default function DegenSea() {
 
           <div className="flex-1 bg-black/70 border border-purple-900 rounded-2xl p-8">
             <Line data={chartData} options={{ maintainAspectRatio: false, plugins: { legend: { display: false }} }} />
-          </div>
-
-          <div className="grid grid-cols-4 gap-4 mt-8 text-center">
-            <div className="border border-purple-900 p-6">
-              <div className="text-xs opacity-60">24H VOL</div>
-              <div className="text-3xl mt-2 font-mono">{stats?.total?.volume?.toFixed(0) || '1,234'} ETH</div>
-            </div>
-            <div className="border border-purple-900 p-6">
-              <div className="text-xs opacity-60">OWNERS</div>
-              <div className="text-3xl mt-2 font-mono">{stats?.total?.num_owners || '4,567'}</div>
-            </div>
-            <div className="border border-purple-900 p-6">
-              <div className="text-xs opacity-60">LISTED</div>
-              <div className="text-3xl mt-2 font-mono">—</div>
-            </div>
-            <div className="border border-purple-900 p-6 bg-purple-950/30">
-              <div className="text-xs opacity-60">DEGEN SCORE</div>
-              <div className="text-3xl mt-2 font-mono text-orange-400">98</div>
-            </div>
           </div>
         </div>
 
@@ -142,13 +120,6 @@ export default function DegenSea() {
           <button className="w-full py-8 text-2xl font-bold bg-purple-700 hover:bg-purple-600 rounded-2xl">
             PLACE BID
           </button>
-
-          <div className="pt-12 border-t border-purple-900 text-xs leading-relaxed opacity-70">
-            NO IMAGES.<br />
-            NO NARRATIVE.<br />
-            NO COPIUM.<br /><br />
-            JUST CHARTS + DEGEN ENERGY.
-          </div>
         </div>
       </div>
     </div>

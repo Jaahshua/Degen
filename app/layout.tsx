@@ -1,6 +1,5 @@
 import type { Metadata } from 'next';
 import './globals.css';
-import Providers from './providers';
 
 export const metadata: Metadata = {
   title: 'DegenSea — Pure NFT Meme Terminal',
@@ -14,9 +13,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
-      <body>
-        <Providers>{children}</Providers>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
