@@ -11,7 +11,7 @@ export default function Marquee() {
           const up = c.change24h >= 0;
           return (
             <div key={`${c.slug}-${i}`} className="flex items-center gap-2">
-              <span className="text-white/45">$</span>
+              <span className="text-white/40">$</span>
               <span className="text-white font-bold tracking-wider">{c.ticker}</span>
               <span className="text-white/70">{c.floor.toFixed(2)}Ξ</span>
               <span className={up ? 'text-up' : 'text-down'}>

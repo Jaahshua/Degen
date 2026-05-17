@@ -9,10 +9,11 @@ import LaunchpadView from './components/LaunchpadView';
 import LoadingScreen from './components/LoadingScreen';
 import BottomNav from './components/BottomNav';
 import MobileSearchOverlay from './components/MobileSearchOverlay';
+import LiveTradeBubble from './components/LiveTradeBubble';
 
 export type View = 'markets' | 'drops' | 'launchpad';
 
-const KEY = 'degensea-entered-v1';
+const KEY = 'degensea-entered-v2';
 
 export default function DegenSea() {
   const [view, setView] = useState<View>('markets');
@@ -24,22 +25,23 @@ export default function DegenSea() {
     if (typeof window === 'undefined') return;
     try {
       if (sessionStorage.getItem(KEY) === '1') setLoading(false);
-    } catch { /* private mode */ }
+    } catch {}
   }, []);
 
-  const finishLoading = () => {
+  const finish = () => {
     try { sessionStorage.setItem(KEY, '1'); } catch {}
     setLoading(false);
   };
 
   return (
     <div className="min-h-screen">
-      {loading && <LoadingScreen onDone={finishLoading} />}
+      {loading && <LoadingScreen onDone={finish} />}
 
       <ProjectorTopBar view={view} onView={setView} search={search} onSearch={setSearch} />
       <Marquee />
+      <LiveTradeBubble />
 
-      <main className="pb-24 md:pb-16">
+      <main className="pb-24 md:pb-12">
         {view === 'markets'   && <MarketsView   search={search} />}
         {view === 'drops'     && <DropsView     search={search} />}
         {view === 'launchpad' && <LaunchpadView search={search} />}

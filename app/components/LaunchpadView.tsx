@@ -5,9 +5,9 @@ import { Rocket, Flame, Sparkles, X, ArrowUpRight, ArrowDownRight, Users, Clock,
 import { LAUNCH_TOKENS, formatUsd, formatAge, type LaunchToken } from '../data';
 
 const FILTERS = [
-  { id: 'new',  label: 'NEW',              icon: Sparkles },
-  { id: 'hot',  label: 'HOT',              icon: Flame    },
-  { id: 'near', label: 'NEAR GRADUATION',  icon: Crown    },
+  { id: 'new',  label: 'New',              icon: Sparkles },
+  { id: 'hot',  label: 'Hot',              icon: Flame    },
+  { id: 'near', label: 'Near Graduation',  icon: Crown    },
 ] as const;
 type FilterId = typeof FILTERS[number]['id'];
 
@@ -27,13 +27,8 @@ function BondingCurve({ pct, hue1, hue2 }: { pct: number; hue1: string; hue2: st
           <stop offset="100%" stopColor={hue2} />
         </linearGradient>
       </defs>
-      <polyline
-        points={points.map(([x, y]) => `${x},${y}`).join(' ')}
-        fill="none"
-        stroke="rgba(255,255,255,0.18)"
-        strokeWidth="1.2"
-      />
-      <rect x="0" y="92" width="100"   height="6" fill="rgba(255,255,255,0.06)" rx="2" />
+      <polyline points={points.map(([x, y]) => `${x},${y}`).join(' ')} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" />
+      <rect x="0" y="92" width="100" height="6" fill="rgba(255,255,255,0.06)" rx="2" />
       <rect x="0" y="92" width={fillPct} height="6" fill={`url(#${id})`} rx="2" />
     </svg>
   );
@@ -41,43 +36,41 @@ function BondingCurve({ pct, hue1, hue2 }: { pct: number; hue1: string; hue2: st
 
 export default function LaunchpadView({ search }: { search: string }) {
   const [filter, setFilter] = useState<FilterId>('new');
-  const [buyToken, setBuyToken] = useState<LaunchToken | null>(null);
+  const [buy, setBuy] = useState<LaunchToken | null>(null);
   const [launchOpen, setLaunchOpen] = useState(false);
 
   const tokens = useMemo<LaunchToken[]>(() => {
     const q = search.trim().toLowerCase();
     let list = LAUNCH_TOKENS;
-    if (q) list = list.filter(t =>
-      t.ticker.toLowerCase().includes(q) || t.name.toLowerCase().includes(q),
-    );
-    const sorted = [...list];
-    if (filter === 'new')  sorted.sort((a, b) => a.ageMin - b.ageMin);
-    if (filter === 'hot')  sorted.sort((a, b) => b.change24h - a.change24h);
-    if (filter === 'near') sorted.sort((a, b) => b.bondingPct - a.bondingPct);
-    return sorted;
+    if (q) list = list.filter(t => t.ticker.toLowerCase().includes(q) || t.name.toLowerCase().includes(q));
+    const s = [...list];
+    if (filter === 'new')  s.sort((a, b) => a.ageMin - b.ageMin);
+    if (filter === 'hot')  s.sort((a, b) => b.change24h - a.change24h);
+    if (filter === 'near') s.sort((a, b) => b.bondingPct - a.bondingPct);
+    return s;
   }, [search, filter]);
 
   return (
-    <div className="px-3 pt-3 space-y-4">
+    <div className="px-3 md:px-6 pt-4 pb-32 md:pb-16 max-w-7xl mx-auto space-y-6">
       {/* HERO */}
-      <div className="term-panel relative overflow-hidden">
-        <div className="absolute -top-32 -right-16 w-[360px] h-[360px] rounded-full bg-orange-400/15 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-32 -left-10 w-[320px] h-[320px] rounded-full bg-purple-600/20 blur-3xl pointer-events-none" />
-        <div className="relative flex flex-col md:flex-row md:items-end md:justify-between gap-4 p-5 md:p-6">
+      <div className="relative card-hot p-5 md:p-7 overflow-hidden">
+        <div className="absolute -top-24 -right-12 w-[320px] h-[320px] rounded-full bg-pink-500/20 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-12 w-[260px] h-[260px] rounded-full bg-amber-400/15 blur-3xl pointer-events-none" />
+        <div className="relative flex flex-col md:flex-row md:items-end md:justify-between gap-4">
           <div>
             <div className="flex items-center gap-1.5 text-pink-300/90 text-[10px] uppercase tracking-[0.22em] mb-2">
-              <Rocket size={11}/> Sunset Launchpad
+              <Rocket size={12}/> Sunset Launchpad
             </div>
-            <h1 className="font-display text-3xl md:text-4xl font-bold tracking-tight leading-tight">
+            <h1 className="font-display font-black text-3xl md:text-5xl tracking-mega leading-none">
               Launch &amp; trade <span className="text-sunset">meme coins</span>
             </h1>
-            <p className="text-white/55 mt-1.5 max-w-md text-sm">
-              Anyone can launch a token on a bonding curve. Buy early, sell into momentum, graduate to mainnet.
+            <p className="text-white/55 mt-2 max-w-md text-sm">
+              Anyone can launch on a bonding curve. Buy early, sell into momentum, graduate to mainnet.
             </p>
           </div>
           <button
             onClick={() => setLaunchOpen(true)}
-            className="btn-sunset rounded-lg px-5 py-3 font-display text-sm tracking-wider uppercase flex items-center gap-2 self-start pulse-glow"
+            className="btn-sunset rounded-2xl px-5 py-3.5 font-display font-black text-sm tracking-wider uppercase flex items-center gap-2 self-start pulse-glow"
           >
             <Rocket size={14}/> Launch new token
           </button>
@@ -93,8 +86,8 @@ export default function LaunchpadView({ search }: { search: string }) {
               <button
                 key={f.id}
                 onClick={() => setFilter(f.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-display tracking-wider uppercase transition ${
-                  active ? 'btn-sunset' : 'btn-ghost'
+                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-display font-bold tracking-wider uppercase transition ${
+                  active ? 'btn-sunset' : 'bg-white/4 border border-white/8 text-white/65 hover:text-white hover:border-pink-400/30'
                 }`}
               >
                 <f.icon size={12}/>
@@ -103,71 +96,67 @@ export default function LaunchpadView({ search }: { search: string }) {
             );
           })}
         </div>
-        <div className="text-[11px] text-white/40 font-mono">{tokens.length} live tokens</div>
+        <div className="text-[11px] text-white/40 font-mono">{tokens.length} live</div>
       </div>
 
       {/* Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {tokens.map(t => (
-          <TokenCard key={t.id} t={t} onBuy={() => setBuyToken(t)} />
-        ))}
+        {tokens.map(t => <TokenRow key={t.id} t={t} onBuy={() => setBuy(t)} />)}
         {tokens.length === 0 && (
-          <div className="col-span-full term-panel p-10 text-center text-white/40 text-sm">No tokens match.</div>
+          <div className="col-span-full card p-10 text-center text-white/40 text-sm">No tokens match.</div>
         )}
       </div>
 
-      {buyToken && <BuyModal t={buyToken} onClose={() => setBuyToken(null)} />}
+      {buy && <BuyModal t={buy} onClose={() => setBuy(null)} />}
       {launchOpen && <LaunchModal onClose={() => setLaunchOpen(false)} />}
     </div>
   );
 }
 
-function TokenCard({ t, onBuy }: { t: LaunchToken; onBuy: () => void }) {
+function TokenRow({ t, onBuy }: { t: LaunchToken; onBuy: () => void }) {
   const up = t.change24h >= 0;
   return (
-    <div className="term-panel hover:border-pink-400/30 transition p-3 group">
-      <div className="flex items-center gap-2.5">
-        <div
-          className="w-10 h-10 rounded-md shrink-0 relative overflow-hidden flex items-center justify-center"
-          style={{ background: `linear-gradient(135deg, ${t.hue1}, ${t.hue2})` }}
-        >
-          <span className="text-white font-display font-bold text-sm drop-shadow">{t.ticker.slice(0, 2)}</span>
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-baseline gap-1.5">
-            <span className="font-display font-bold text-sm tracking-tight truncate">${t.ticker}</span>
-            <span className="text-[10px] text-white/35 font-mono shrink-0 flex items-center gap-0.5">
-              <Clock size={9}/>{formatAge(t.ageMin)}
-            </span>
+    <div className="card overflow-hidden p-4 hover:border-pink-400/35 transition">
+      {/* Header with watermark */}
+      <div
+        className="relative -mx-4 -mt-4 mb-3 px-4 py-3 overflow-hidden"
+        style={{ background: `linear-gradient(135deg, ${t.hue1} 0%, ${t.hue2} 100%)` }}
+      >
+        <span className="absolute -bottom-3 -right-2 font-display font-black tracking-mega text-white/15 leading-none text-[80px] select-none pointer-events-none">
+          {t.ticker.slice(0, 5)}
+        </span>
+        <div className="relative flex items-center justify-between">
+          <div>
+            <div className="font-display font-black text-white text-lg leading-none drop-shadow">${t.ticker}</div>
+            <div className="text-[11px] text-white/80 mt-0.5 truncate max-w-[160px]">{t.name}</div>
           </div>
-          <div className="text-[11px] text-white/45 truncate">{t.name}</div>
-        </div>
-        <div className={`text-right font-mono shrink-0 ${up ? 'text-up' : 'text-down'}`}>
-          <div className="flex items-center gap-0.5 text-xs justify-end">
-            {up ? <ArrowUpRight size={11}/> : <ArrowDownRight size={11}/>}
-            {up ? '+' : ''}{t.change24h.toFixed(0)}%
+          <div className={`text-right shrink-0 ${up ? 'text-emerald-100' : 'text-rose-100'}`}>
+            <div className="font-mono text-sm font-bold flex items-center gap-0.5 justify-end">
+              {up ? <ArrowUpRight size={12}/> : <ArrowDownRight size={12}/>}
+              {up ? '+' : ''}{t.change24h.toFixed(0)}%
+            </div>
+            <div className="text-[10px] text-white/70 flex items-center gap-0.5 justify-end font-mono">
+              <Clock size={9}/>{formatAge(t.ageMin)}
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mt-2.5 text-[11px] font-mono">
-        <Cell k="Price" v={formatUsd(t.priceUsd)} />
-        <Cell k="MC"    v={formatUsd(t.marketcap)} />
+      <div className="grid grid-cols-3 gap-2 text-[11px] font-mono">
+        <Cell k="Price"   v={formatUsd(t.priceUsd)} />
+        <Cell k="MC"      v={formatUsd(t.marketcap)} />
         <Cell k="Holders" v={<span className="flex items-center gap-0.5"><Users size={9}/>{t.holders}</span>} />
       </div>
 
-      <div className="mt-2">
+      <div className="mt-3">
         <BondingCurve pct={t.bondingPct} hue1={t.hue1} hue2={t.hue2} />
         <div className="flex items-center justify-between text-[10px] mt-0.5">
-          <span className="text-white/35 uppercase tracking-widest">Bonding</span>
-          <span className="font-mono text-sunset">{t.bondingPct}%</span>
+          <span className="text-white/40 uppercase tracking-widest">Bonding</span>
+          <span className="font-mono text-sunset font-bold">{t.bondingPct}%</span>
         </div>
       </div>
 
-      <button
-        onClick={onBuy}
-        className="btn-sunset w-full mt-2.5 rounded-md py-2 text-[11px] font-display tracking-wider uppercase"
-      >
+      <button onClick={onBuy} className="btn-sunset w-full mt-3 rounded-lg py-2 text-xs font-display font-bold tracking-wider uppercase">
         Buy {t.ticker}
       </button>
     </div>
@@ -178,7 +167,7 @@ function Cell({ k, v }: { k: string; v: React.ReactNode }) {
   return (
     <div>
       <div className="text-[9px] uppercase tracking-widest text-white/40">{k}</div>
-      <div className="mt-0.5">{v}</div>
+      <div className="mt-0.5 text-white">{v}</div>
     </div>
   );
 }
@@ -191,27 +180,28 @@ function BuyModal({ t, onClose }: { t: LaunchToken; onClose: () => void }) {
   const tokens = usd / t.priceUsd;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
-      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md term-panel p-5">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center px-4">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md card p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-md" style={{ background: `linear-gradient(135deg, ${t.hue1}, ${t.hue2})` }} />
+            <div className="w-10 h-10 rounded-lg shrink-0 flex items-center justify-center font-display font-bold text-white"
+                 style={{ background: `linear-gradient(135deg, ${t.hue1}, ${t.hue2})` }}>
+              {t.ticker.slice(0, 2)}
+            </div>
             <div>
-              <div className="font-display font-bold tracking-tight">${t.ticker}</div>
-              <div className="text-[11px] text-white/45">{t.name}</div>
+              <div className="font-display font-black tracking-tight">${t.ticker}</div>
+              <div className="text-[11px] text-white/50">{t.name}</div>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-md bg-white/5 hover:bg-white/10" aria-label="Close">
-            <X size={15}/>
-          </button>
+          <button onClick={onClose} className="p-2 rounded-md bg-white/5 hover:bg-white/10"><X size={15}/></button>
         </div>
 
-        <div className="flex p-1 gap-1 bg-white/3 rounded-lg mb-3">
+        <div className="flex p-1 gap-1 bg-white/4 rounded-lg mb-3">
           {(['buy','sell'] as const).map(s => (
             <button key={s} onClick={() => setSide(s)}
               className={`flex-1 py-1.5 rounded-md text-[11px] font-display font-bold tracking-wider uppercase ${
-                side===s ? (s==='buy' ? 'btn-up' : 'btn-down') : 'text-white/50'
+                side === s ? (s === 'buy' ? 'btn-up' : 'btn-down') : 'text-white/50'
               }`}>{s}</button>
           ))}
         </div>
@@ -238,8 +228,8 @@ function BuyModal({ t, onClose }: { t: LaunchToken; onClose: () => void }) {
           <Row k="Slippage" v="1%" />
         </div>
 
-        <button className={`w-full mt-4 rounded-lg py-2.5 font-display text-sm tracking-wider uppercase ${
-          side==='buy' ? 'btn-sunset' : 'btn-down'
+        <button className={`w-full mt-4 rounded-lg py-3 font-display font-black text-sm tracking-wider uppercase ${
+          side === 'buy' ? 'btn-sunset' : 'btn-down'
         }`}>
           {side === 'buy' ? `Buy ${t.ticker}` : `Sell ${t.ticker}`}
         </button>
@@ -255,23 +245,20 @@ function LaunchModal({ onClose }: { onClose: () => void }) {
   const [desc, setDesc] = useState('');
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center px-4">
-      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-lg term-panel p-6">
+    <div className="fixed inset-0 z-[80] flex items-center justify-center px-4">
+      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-lg card p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
             <div className="text-[10px] uppercase tracking-[0.22em] text-pink-300/90">Sunset Launchpad</div>
-            <div className="font-display text-2xl font-bold tracking-tight mt-1">Launch a token</div>
+            <div className="font-display font-black text-2xl tracking-mega mt-1">Launch a token</div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-md bg-white/5 hover:bg-white/10" aria-label="Close">
-            <X size={15}/>
-          </button>
+          <button onClick={onClose} className="p-2 rounded-md bg-white/5 hover:bg-white/10"><X size={15}/></button>
         </div>
 
         <div className="space-y-3">
           <Field label="Ticker" hint="3–6 chars">
-            <input value={ticker} onChange={e => setTicker(e.target.value.toUpperCase().slice(0,6))}
-              placeholder="MIAMI"
+            <input value={ticker} onChange={e => setTicker(e.target.value.toUpperCase().slice(0, 6))} placeholder="MIAMI"
               className="w-full bg-white/4 border border-white/8 hover:border-pink-400/30 focus:border-pink-400/60 transition rounded-lg px-3 py-2.5 font-mono outline-none" />
           </Field>
           <Field label="Name">
@@ -290,7 +277,7 @@ function LaunchModal({ onClose }: { onClose: () => void }) {
           </div>
         </div>
 
-        <button className="w-full mt-5 btn-sunset rounded-lg py-3 font-display text-sm tracking-wider uppercase">
+        <button className="w-full mt-5 btn-sunset rounded-lg py-3 font-display font-black text-sm tracking-wider uppercase">
           Deploy token (0.02 Ξ)
         </button>
         <div className="text-[10px] text-white/35 text-center mt-2">Mock UI · no transaction will be submitted.</div>
