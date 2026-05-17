@@ -98,3 +98,91 @@ export const formatCountdown = (s: number) => {
   if (h > 0) return `${h}H ${m}M ${sec}S`;
   return `${m}M ${sec}S`;
 };
+
+export const formatEth = (n: number, decimals = 3) =>
+  n >= 100 ? n.toFixed(1) : n >= 10 ? n.toFixed(2) : n.toFixed(decimals);
+
+export const shortAddr = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
+
+const HEX = '0123456789abcdef';
+export function makeAddr(seed: number) {
+  // Tiny seeded PRNG so the same row keeps the same wallet across renders
+  let s = seed | 0;
+  let out = '0x';
+  for (let i = 0; i < 40; i++) {
+    s = (s * 1664525 + 1013904223) | 0;
+    out += HEX[(s >>> 24) & 0xf];
+  }
+  return out;
+}
+
+export type Trade = {
+  id: number;
+  ageSec: number;
+  type: 'BUY' | 'SELL' | 'SWEEP' | 'BID';
+  price: number;
+  amount: number;
+  maker: string;
+};
+
+export function generateTrades(slug: string, floor: number, count = 22): Trade[] {
+  // deterministic per-slug so the table doesn't visually thrash between renders
+  let seed = 0;
+  for (let i = 0; i < slug.length; i++) seed = (seed * 31 + slug.charCodeAt(i)) | 0;
+  const out: Trade[] = [];
+  let t = 2;
+  for (let i = 0; i < count; i++) {
+    seed = (seed * 1664525 + 1013904223) | 0;
+    const r = (Math.abs(seed) % 10000) / 10000;
+    const r2 = (Math.abs(seed ^ 0x9e3779b1) % 10000) / 10000;
+    const r3 = (Math.abs(seed ^ 0x7f4a7c15) % 10000) / 10000;
+
+    const type: Trade['type'] =
+      r < 0.55 ? 'BUY' : r < 0.85 ? 'SELL' : r < 0.94 ? 'SWEEP' : 'BID';
+    const drift = (r2 - 0.5) * 0.04 * floor;
+    const price = Math.max(0.001, floor + drift);
+    const amount =
+      type === 'SWEEP' ? 2 + Math.floor(r3 * 5) :
+      type === 'BID'   ? 1 :
+                         Math.max(1, Math.floor(r3 * 3));
+    out.push({
+      id: i,
+      ageSec: t,
+      type,
+      price,
+      amount,
+      maker: makeAddr(seed ^ i),
+    });
+    t += 3 + Math.floor(r3 * 90);
+  }
+  return out;
+}
+
+export type Holder = { rank: number; address: string; holds: number; pct: number };
+
+export function generateHolders(slug: string, supply: number, count = 8): Holder[] {
+  let seed = 0;
+  for (let i = 0; i < slug.length; i++) seed = (seed * 17 + slug.charCodeAt(i)) | 0;
+  const out: Holder[] = [];
+  let remainingPct = 28;
+  for (let i = 0; i < count; i++) {
+    seed = (seed * 1103515245 + 12345) | 0;
+    const r = (Math.abs(seed) % 10000) / 10000;
+    const slice = i === 0 ? 4.5 + r * 2 : Math.max(0.4, remainingPct * (0.18 + r * 0.18));
+    remainingPct = Math.max(0, remainingPct - slice);
+    out.push({
+      rank: i + 1,
+      address: makeAddr(seed ^ (i * 7919)),
+      holds: Math.max(1, Math.round((slice / 100) * supply)),
+      pct: Number(slice.toFixed(2)),
+    });
+  }
+  return out;
+}
+
+export const formatAgeSec = (s: number) => {
+  if (s < 60) return `${s}s`;
+  if (s < 3600) return `${Math.floor(s / 60)}m`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h`;
+  return `${Math.floor(s / 86400)}d`;
+};

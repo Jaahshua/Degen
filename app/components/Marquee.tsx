@@ -1,24 +1,23 @@
 'use client';
 
 import { COLLECTIONS } from '../data';
-import { TrendingUp, TrendingDown } from 'lucide-react';
 
 export default function Marquee() {
   const items = [...COLLECTIONS, ...COLLECTIONS];
   return (
-    <div className="relative overflow-hidden border-y border-white/5 bg-black/30 backdrop-blur-sm">
-      <div className="marquee-track flex gap-10 whitespace-nowrap py-2.5 font-mono text-sm">
+    <div className="relative overflow-hidden border-b border-white/5 bg-black/60 backdrop-blur-sm">
+      <div className="marquee-track flex gap-8 whitespace-nowrap py-1.5 font-mono text-[11px]">
         {items.map((c, i) => {
           const up = c.change24h >= 0;
           return (
             <div key={`${c.slug}-${i}`} className="flex items-center gap-2">
-              <span className="text-sunset font-bold">{c.ticker}</span>
-              <span className="text-cream/80">{c.floor.toFixed(2)} Ξ</span>
-              <span className={`flex items-center gap-0.5 ${up ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {up ? <TrendingUp size={13}/> : <TrendingDown size={13}/>}
+              <span className="text-white/45">$</span>
+              <span className="text-white font-bold tracking-wider">{c.ticker}</span>
+              <span className="text-white/70">{c.floor.toFixed(2)}Ξ</span>
+              <span className={up ? 'text-up' : 'text-down'}>
                 {up ? '+' : ''}{c.change24h.toFixed(1)}%
               </span>
-              <span className="text-white/20">•</span>
+              <span className="text-white/15">·</span>
             </div>
           );
         })}

@@ -3,16 +3,26 @@
 @tailwind utilities;
 
 :root {
-  --night: #08041a;
-  --night-2: #110625;
-  --sky-blue: #1f2469;
-  --sky-purple: #5b2c8e;
+  --bg:        #050309;
+  --bg-2:      #0a0712;
+  --surface:   #0e0a18;
+  --surface-2: #15101f;
+  --border:    rgba(167, 139, 250, 0.08);
+  --border-hi: rgba(255, 122, 155, 0.28);
+  --text:      #ece6d8;
+  --muted:     #8a8294;
+  --dim:       #4f4860;
+
+  --sky-blue:    #1f2469;
+  --sky-purple:  #5b2c8e;
   --sky-magenta: #c54a8e;
-  --sky-pink: #ff7a9b;
-  --sky-coral: #ff9966;
-  --sky-gold: #fdb869;
-  --cream: #f5e6d3;
-  --muted: #a78bfa;
+  --sky-pink:    #ff7a9b;
+  --sky-coral:   #ff9966;
+  --sky-gold:    #fdb869;
+
+  --up:   #10c87c;
+  --down: #ef4444;
+  --bid:  #fbbf24;
 }
 
 * { box-sizing: border-box; }
@@ -20,125 +30,155 @@
 html, body {
   margin: 0;
   padding: 0;
-  background: var(--night);
-  color: var(--cream);
+  background: #000;
+  color: var(--text);
   font-family: var(--font-grotesk), ui-sans-serif, system-ui, -apple-system, sans-serif;
   min-height: 100vh;
   overflow-x: hidden;
+  font-feature-settings: "ss01" on, "cv11" on;
 }
 
 body {
   background:
-    radial-gradient(ellipse 1200px 800px at 90% -10%, rgba(255, 122, 155, 0.18) 0%, transparent 55%),
-    radial-gradient(ellipse 900px 600px at 100% 0%, rgba(253, 184, 105, 0.12) 0%, transparent 50%),
-    radial-gradient(ellipse 1000px 800px at -10% 110%, rgba(91, 44, 142, 0.25) 0%, transparent 55%),
-    linear-gradient(180deg, #0e0623 0%, #07020e 60%, #050108 100%);
+    radial-gradient(ellipse 900px 500px at 100% -10%, rgba(255, 122, 155, 0.09) 0%, transparent 60%),
+    radial-gradient(ellipse 600px 400px at 100% 0%, rgba(253, 184, 105, 0.06) 0%, transparent 55%),
+    linear-gradient(180deg, #050309 0%, #030106 70%, #020104 100%);
   background-attachment: fixed;
 }
 
 .font-display { font-family: var(--font-grotesk), system-ui, sans-serif; letter-spacing: -0.02em; }
-.font-mono    { font-family: var(--font-mono), ui-monospace, monospace; }
+.font-mono    { font-family: var(--font-mono), ui-monospace, monospace; font-variant-numeric: tabular-nums; }
 
-/* Sunset gradients */
+/* Sunset gradients (reused as accents) */
 .bg-sunset {
-  background: linear-gradient(135deg, #1f2469 0%, #5b2c8e 20%, #c54a8e 50%, #ff7a9b 72%, #ff9966 88%, #fdb869 100%);
-}
-.bg-sunset-soft {
-  background: linear-gradient(135deg, rgba(91,44,142,0.4) 0%, rgba(197,74,142,0.4) 50%, rgba(255,153,102,0.4) 100%);
-}
-.bg-sunset-vertical {
-  background: linear-gradient(180deg, #1f2469 0%, #5b2c8e 22%, #c54a8e 55%, #ff7a9b 78%, #fdb869 100%);
+  background: linear-gradient(135deg, #5b2c8e 0%, #c54a8e 35%, #ff7a9b 65%, #ff9966 88%, #fdb869 100%);
 }
 .text-sunset {
-  background: linear-gradient(135deg, #fdb869 0%, #ff7a9b 45%, #c54a8e 100%);
+  background: linear-gradient(135deg, #fdb869 0%, #ff7a9b 50%, #c54a8e 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
-.border-sunset {
-  border-image: linear-gradient(135deg, #5b2c8e, #ff7a9b, #fdb869) 1;
+.text-up   { color: var(--up); }
+.text-down { color: var(--down); }
+.text-bid  { color: var(--bid); }
+
+/* ============ PROJECTOR BEAM (top bar) ============
+   Three stacked layers create a beam of light fading from black on the
+   left to vibrant sunset on the right, "projecting" the menu items
+   onto the upper-right corner. */
+
+.projector-bar {
+  position: relative;
+  background: #000;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-/* Ripped paper edge — irregular clip-path approximating a torn rectangle.
-   Applied to a rectangle in the upper-right; left + bottom edges are torn,
-   top + right are flush against the viewport corner. */
-.ripped-corner {
-  clip-path: polygon(
-    100% 0%,
-    100% 100%,
-    96% 99%,
-    92% 96%,
-    88% 99%,
-    83% 95%,
-    78% 98%,
-    72% 94%,
-    66% 97%,
-    60% 93%,
-    54% 96%,
-    47% 91%,
-    40% 95%,
-    33% 90%,
-    27% 94%,
-    20% 89%,
-    14% 93%,
-    8% 88%,
-    3% 92%,
-    0% 86%,
-    2% 78%,
-    5% 72%,
-    1% 65%,
-    6% 58%,
-    2% 50%,
-    7% 42%,
-    1% 34%,
-    8% 26%,
-    3% 18%,
-    9% 10%,
-    4% 4%,
-    12% 0%
-  );
+.projector-beam {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 78%;
+  pointer-events: none;
+  z-index: 1;
 }
 
-.ripped-drawer {
-  clip-path: polygon(
-    100% 0%,
-    100% 100%,
-    0% 100%,
-    2% 96%, 5% 92%, 1% 87%, 6% 82%, 2% 76%, 7% 70%,
-    1% 64%, 6% 58%, 2% 52%, 7% 46%, 1% 40%, 6% 34%,
-    2% 28%, 7% 22%, 1% 16%, 6% 10%, 2% 5%, 8% 0%
-  );
+/* Outer soft glow - the room lit by the beam */
+.projector-beam::before {
+  content: '';
+  position: absolute;
+  inset: -40% -10% -40% 0;
+  background: radial-gradient(ellipse at 100% 50%,
+    rgba(255, 122, 155, 0.30) 0%,
+    rgba(197, 74, 142, 0.18) 25%,
+    rgba(91, 44, 142, 0.10) 45%,
+    transparent 70%);
+  filter: blur(28px);
 }
 
-/* Subtle paper-fiber noise overlay */
-.paper-texture::after {
+/* The beam itself - conical, fades black -> sunset, clipped to a cone */
+.projector-beam::after {
   content: '';
   position: absolute;
   inset: 0;
+  background: linear-gradient(90deg,
+    rgba(0, 0, 0, 0) 0%,
+    rgba(31, 36, 105, 0.20) 22%,
+    rgba(91, 44, 142, 0.45) 42%,
+    rgba(197, 74, 142, 0.70) 62%,
+    rgba(255, 122, 155, 0.90) 82%,
+    rgba(253, 184, 105, 1.00) 100%);
+  clip-path: polygon(0% 48%, 100% 0%, 100% 100%, 0% 52%);
+  filter: blur(0.5px);
+}
+
+/* Subtle film-grain so the beam looks like light hitting dust */
+.projector-grain {
+  position: absolute;
+  inset: 0;
   pointer-events: none;
-  opacity: 0.18;
+  z-index: 2;
+  opacity: 0.12;
   mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='80'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.7 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 }
 
-/* Glows */
-.glow-pink { box-shadow: 0 0 60px -10px rgba(255, 122, 155, 0.55); }
-.glow-coral { box-shadow: 0 0 60px -10px rgba(255, 153, 102, 0.55); }
-.glow-purple { box-shadow: 0 0 60px -10px rgba(91, 44, 142, 0.6); }
-.glow-gold { box-shadow: 0 0 50px -8px rgba(253, 184, 105, 0.5); }
+/* Hot focused spot at the right corner where the menu lives */
+.projector-spot {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 38%;
+  pointer-events: none;
+  z-index: 2;
+  background: radial-gradient(ellipse at 95% 50%,
+    rgba(253, 184, 105, 0.35) 0%,
+    rgba(255, 122, 155, 0.18) 30%,
+    transparent 60%);
+  mix-blend-mode: screen;
+}
 
-/* Card */
-.card {
-  background: linear-gradient(180deg, rgba(31, 13, 56, 0.85) 0%, rgba(15, 6, 30, 0.85) 100%);
-  border: 1px solid rgba(167, 139, 250, 0.15);
-  backdrop-filter: blur(8px);
-  border-radius: 18px;
+/* Menu items look "lit up" by the beam */
+.projector-item {
+  position: relative;
+  z-index: 5;
+  color: #ffffff;
+  text-shadow: 0 0 12px rgba(255, 122, 155, 0.55), 0 0 28px rgba(253, 184, 105, 0.3);
+  transition: all 0.15s ease;
 }
-.card-glow {
-  background: linear-gradient(180deg, rgba(91, 44, 142, 0.25) 0%, rgba(15, 6, 30, 0.85) 100%);
-  border: 1px solid rgba(255, 122, 155, 0.3);
-  border-radius: 18px;
+.projector-item:hover {
+  color: #fff;
+  text-shadow: 0 0 16px rgba(255, 122, 155, 0.85), 0 0 38px rgba(253, 184, 105, 0.5);
 }
+.projector-item.active {
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
+/* ============ TERMINAL CARDS ============ */
+
+.term-panel {
+  background: linear-gradient(180deg, rgba(14, 10, 24, 0.92) 0%, rgba(8, 5, 16, 0.92) 100%);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.term-panel-header {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.row-hover { transition: background-color 0.08s ease; }
+.row-hover:hover { background: rgba(255, 122, 155, 0.05); }
 
 /* Buttons */
 .btn-sunset {
@@ -146,22 +186,41 @@ body {
   color: #fff;
   font-weight: 700;
   letter-spacing: 0.02em;
-  transition: all 0.2s ease;
-  box-shadow: 0 8px 28px -8px rgba(255, 122, 155, 0.6);
-}
-.btn-sunset:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 12px 32px -8px rgba(255, 122, 155, 0.8); }
-.btn-ghost {
-  background: rgba(167, 139, 250, 0.08);
-  border: 1px solid rgba(167, 139, 250, 0.25);
-  color: var(--cream);
   transition: all 0.15s ease;
+  box-shadow: 0 8px 24px -10px rgba(255, 122, 155, 0.55), inset 0 1px 0 rgba(255,255,255,0.18);
 }
-.btn-ghost:hover { background: rgba(167, 139, 250, 0.16); border-color: rgba(255,122,155,0.5); }
+.btn-sunset:hover { filter: brightness(1.08); box-shadow: 0 12px 30px -8px rgba(255, 122, 155, 0.75), inset 0 1px 0 rgba(255,255,255,0.25); }
+.btn-up   { background: linear-gradient(180deg, #15d886, #0fae6a); color: #001b0f; font-weight: 800; }
+.btn-down { background: linear-gradient(180deg, #f25b5b, #d63b3b); color: #2a0303; font-weight: 800; }
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
+  color: var(--text);
+  transition: all 0.12s ease;
+}
+.btn-ghost:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--border-hi); }
+
+/* Tag pills */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.tag-up   { background: rgba(16, 200, 124, 0.12); color: var(--up); }
+.tag-down { background: rgba(239, 68, 68,  0.12); color: var(--down); }
+.tag-bid  { background: rgba(251, 191, 36, 0.12); color: var(--bid); }
+.tag-hot  { background: rgba(255, 122, 155, 0.14); color: var(--sky-pink); }
 
 /* Animations */
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 30px -8px rgba(255, 122, 155, 0.4); }
-  50%      { box-shadow: 0 0 60px -8px rgba(255, 122, 155, 0.8); }
+  0%, 100% { box-shadow: 0 0 24px -8px rgba(255, 122, 155, 0.4); }
+  50%      { box-shadow: 0 0 50px -8px rgba(255, 122, 155, 0.85); }
 }
 .pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
 
@@ -169,35 +228,36 @@ body {
   0%   { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
-.marquee-track { animation: marquee 50s linear infinite; }
+.marquee-track { animation: marquee 60s linear infinite; }
 
-@keyframes shimmer {
-  0%   { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+@keyframes flash-up {
+  0%   { background-color: rgba(16, 200, 124, 0.18); }
+  100% { background-color: transparent; }
 }
-.shimmer {
-  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 50%, transparent 100%);
-  background-size: 200% 100%;
-  animation: shimmer 3s linear infinite;
+@keyframes flash-down {
+  0%   { background-color: rgba(239, 68, 68, 0.18); }
+  100% { background-color: transparent; }
 }
+.flash-up   { animation: flash-up   1.4s ease-out; }
+.flash-down { animation: flash-down 1.4s ease-out; }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(-1deg); }
-  50%      { transform: translateY(-4px) rotate(-2deg); }
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
 }
-.float { animation: float 6s ease-in-out infinite; }
+.blink { animation: blink 1.2s ease-in-out infinite; }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(167,139,250,0.2); border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: rgba(167,139,250,0.15); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,122,155,0.4); }
 
-/* RainbowKit theme tweaks to match sunset */
+/* RainbowKit theme tweaks */
 [data-rk] {
   --rk-colors-accentColor: #ff7a9b !important;
-  --rk-colors-accentColorForeground: #fff !important;
-  --rk-radii-actionButton: 12px !important;
-  --rk-radii-connectButton: 12px !important;
-  --rk-radii-modal: 18px !important;
+  --rk-colors-accentColorForeground: #1a0712 !important;
+  --rk-radii-actionButton: 10px !important;
+  --rk-radii-connectButton: 10px !important;
+  --rk-radii-modal: 16px !important;
 }
