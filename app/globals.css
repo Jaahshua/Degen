@@ -62,6 +62,13 @@ body {
 .text-up   { color: var(--up); }
 .text-down { color: var(--down); }
 .text-bid  { color: var(--bid); }
+.border-up { border-color: var(--up); }
+.bg-up     { background: var(--up); }
+
+@media (max-width: 768px) {
+  .projector-beam { width: 70%; }
+  .projector-spot { width: 50%; }
+}
 
 /* ============ PROJECTOR BEAM (top bar) ============
    Three stacked layers create a beam of light fading from black on the

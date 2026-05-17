@@ -1,7 +1,7 @@
 'use client';
 
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { LineChart, Flame, Rocket, Search, X } from 'lucide-react';
+import { LineChart, Flame, Rocket, Search, X, Bell } from 'lucide-react';
 import type { View } from '../page';
 
 const TABS: { id: View; label: string; icon: any }[] = [
@@ -19,19 +19,18 @@ export default function ProjectorTopBar({
   onSearch: (s: string) => void;
 }) {
   return (
-    <header className="projector-bar sticky top-0 z-50 h-16">
-      {/* Projector beam stack — fades from black on the left to sunset on the right */}
+    <header className="projector-bar sticky top-0 z-50 h-14 md:h-16">
       <div className="projector-beam" aria-hidden />
       <div className="projector-spot" aria-hidden />
       <div className="projector-grain" aria-hidden />
 
-      <div className="relative z-10 h-full flex items-center gap-4 px-5">
-        {/* LEFT — logo in the dark */}
-        <a href="#" className="font-display font-bold text-xl tracking-tight shrink-0 select-none">
+      <div className="relative z-10 h-full flex items-center gap-3 md:gap-4 px-4 md:px-5">
+        {/* LEFT — logo */}
+        <a href="#" className="font-display font-bold text-lg md:text-xl tracking-tight shrink-0 select-none">
           <span className="text-sunset">DEGEN</span><span className="text-white/95">SEA</span>
         </a>
 
-        {/* SEARCH — also sits in the dark area */}
+        {/* SEARCH (desktop only — mobile uses the bottom-nav search tab) */}
         <div className="hidden md:block relative w-full max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/35" size={14} />
           <input
@@ -49,8 +48,8 @@ export default function ProjectorTopBar({
 
         <div className="flex-1" />
 
-        {/* RIGHT — menu items "projected" onto the bright end of the beam */}
-        <nav className="flex items-center gap-1">
+        {/* NAV (desktop only) */}
+        <nav className="hidden md:flex items-center gap-1">
           {TABS.map(t => {
             const active = t.id === view;
             return (
@@ -66,8 +65,16 @@ export default function ProjectorTopBar({
           })}
         </nav>
 
-        {/* WALLET — sits in the brightest hot-spot at the corner */}
-        <div className="relative z-10 shrink-0 ml-1">
+        {/* Mobile right icons */}
+        <button
+          className="md:hidden projector-item p-2 rounded-lg"
+          aria-label="Notifications"
+        >
+          <Bell size={18} />
+        </button>
+
+        {/* WALLET — projector hot-spot */}
+        <div className="relative z-10 shrink-0 ml-1 hidden md:block">
           <ConnectButton
             showBalance={false}
             chainStatus="icon"

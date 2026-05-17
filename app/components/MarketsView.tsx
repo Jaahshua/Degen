@@ -14,6 +14,7 @@ import {
   generateTrades, generateHolders,
   formatEth, formatAgeSec, shortAddr,
 } from '../data';
+import MobileMarkets from './MobileMarkets';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip);
 
@@ -116,7 +117,14 @@ export default function MarketsView({ search }: { search: string }) {
   };
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-[260px_minmax(0,1fr)_320px] gap-3 px-3 pt-3">
+    <>
+      {/* Mobile — pump.fun-style list */}
+      <div className="md:hidden">
+        <MobileMarkets search={search} />
+      </div>
+
+      {/* Desktop — 3-column terminal */}
+      <div className="hidden md:grid grid-cols-1 xl:grid-cols-[260px_minmax(0,1fr)_320px] gap-3 px-3 pt-3">
       {/* ============ LEFT — TRENDING TOKENS ============ */}
       <aside className="term-panel">
         <div className="term-panel-header">
@@ -297,7 +305,8 @@ export default function MarketsView({ search }: { search: string }) {
         <TradePanel ticker={selected.ticker} floor={floor} />
         <HoldersPanel holders={holders} totalSupply={selected.supply} />
       </aside>
-    </div>
+      </div>
+    </>
   );
 }
 
