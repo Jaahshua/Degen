@@ -9,7 +9,6 @@ import LaunchpadView from './components/LaunchpadView';
 import LoadingScreen from './components/LoadingScreen';
 import BottomNav from './components/BottomNav';
 import MobileSearchOverlay from './components/MobileSearchOverlay';
-import LiveTradeBubble from './components/LiveTradeBubble';
 
 export type View = 'markets' | 'drops' | 'launchpad';
 
@@ -39,7 +38,6 @@ export default function DegenSea() {
 
       <ProjectorTopBar view={view} onView={setView} search={search} onSearch={setSearch} />
       <Marquee />
-      <LiveTradeBubble />
 
       <main className="pb-24 md:pb-12">
         {view === 'markets'   && <MarketsView   search={search} />}
