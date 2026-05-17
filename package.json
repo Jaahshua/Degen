@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.100.10",
     "chart.js": "^4.4.1",
     "lucide-react": "^0.441.0",
     "next": "^15.2.4",
