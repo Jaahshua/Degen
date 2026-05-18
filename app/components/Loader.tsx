@@ -1,8 +1,16 @@
 'use client';
 
-import Eye from './Eye';
+import Eye, { type EyeState } from './Eye';
 
-const N = 12;
+const N = 10;
+
+function stateFor(progress: number, i: number): EyeState {
+  const slotStart = i / N;
+  const slotMid   = (i + 0.5) / N;
+  if (progress <= slotStart) return 'closed';
+  if (progress <= slotMid)   return 'normal';
+  return 'bloodshot';
+}
 
 export default function Loader({ progress }: { progress: number }) {
   return (
@@ -10,25 +18,24 @@ export default function Loader({ progress }: { progress: number }) {
       <div
         style={{
           position: 'relative',
-          width: 300,
-          height: 52,
+          width: 320,
+          height: 56,
           borderRadius: 999,
           background: 'rgba(0, 0, 0, 0.75)',
           border: '2px solid rgba(255, 255, 255, 0.12)',
           boxShadow:
-            '0 8px 40px -10px rgba(220, 38, 38, 0.6), inset 0 0 24px rgba(220, 38, 38, 0.18)',
+            '0 8px 40px -10px rgba(220, 38, 38, 0.6), inset 0 0 24px rgba(220, 38, 38, 0.16)',
           overflow: 'hidden',
         }}
       >
-        {/* Inner red glow */}
+        {/* Inner red glow that intensifies with progress */}
         <div
           style={{
             position: 'absolute',
             inset: 0,
             borderRadius: 999,
-            background:
-              'radial-gradient(ellipse at center, rgba(220, 38, 38, 0.22), transparent 70%)',
-            opacity: 0.3 + progress * 0.55,
+            background: 'radial-gradient(ellipse at center, rgba(220, 38, 38, 0.22), transparent 70%)',
+            opacity: 0.25 + progress * 0.6,
             transition: 'opacity 300ms ease',
             pointerEvents: 'none',
           }}
@@ -42,11 +49,11 @@ export default function Loader({ progress }: { progress: number }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '0 14px',
+            padding: '0 12px',
           }}
         >
           {Array.from({ length: N }).map((_, i) => (
-            <Eye key={i} size={18} lit={progress >= (i + 1) / N} />
+            <Eye key={i} size={22} state={stateFor(progress, i)} />
           ))}
         </div>
 
@@ -59,7 +66,7 @@ export default function Loader({ progress }: { progress: number }) {
             right: 12,
             height: 3,
             borderRadius: 999,
-            background: 'rgba(255,255,255,0.06)',
+            background: 'rgba(255, 255, 255, 0.06)',
             overflow: 'hidden',
           }}
         >
@@ -75,7 +82,7 @@ export default function Loader({ progress }: { progress: number }) {
           />
         </div>
 
-        {/* Scan-line sweep */}
+        {/* Scan line sweep */}
         <span
           aria-hidden
           style={{
@@ -84,8 +91,8 @@ export default function Loader({ progress }: { progress: number }) {
             bottom: 4,
             width: 1,
             background:
-              'linear-gradient(to bottom, transparent, rgba(255,61,138,0.85), transparent)',
-            boxShadow: '0 0 10px rgba(255,61,138,0.85)',
+              'linear-gradient(to bottom, transparent, rgba(255, 61, 138, 0.85), transparent)',
+            boxShadow: '0 0 10px rgba(255, 61, 138, 0.85)',
             animation: 'scan-bar 2.6s ease-in-out infinite',
             pointerEvents: 'none',
           }}
@@ -96,7 +103,7 @@ export default function Loader({ progress }: { progress: number }) {
         style={{
           fontSize: 11,
           letterSpacing: '0.55em',
-          color: 'rgba(255,255,255,0.55)',
+          color: 'rgba(255, 255, 255, 0.55)',
           textTransform: 'uppercase',
           fontWeight: 700,
           fontFamily: 'var(--font-mono), monospace',
