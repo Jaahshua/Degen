@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ArrowUp, Sprout, Flame, Sparkles, TrendingUp, Trophy } from 'lucide-react';
+import { ArrowUp, Sprout, Search, X } from 'lucide-react';
 import { COLLECTIONS, type Collection } from '../data';
 import Spark, { sparkline } from './Spark';
 import TokenSheet from './TokenSheet';
@@ -24,27 +24,15 @@ function fakeAge(slug: string) {
   return `${days}d`;
 }
 
-const FILTERS = [
-  { id: 'trending', label: 'Trending', icon: Flame      },
-  { id: 'new',      label: 'New',      icon: Sparkles   },
-  { id: 'gainers',  label: 'Gainers',  icon: TrendingUp },
-  { id: 'top',      label: 'Top Vol',  icon: Trophy     },
-] as const;
-type FilterId = typeof FILTERS[number]['id'];
-
-function sortList(filter: FilterId, list: Collection[]): Collection[] {
-  const s = [...list];
-  if (filter === 'trending') return s.sort((a, b) => b.volume24h - a.volume24h);
-  if (filter === 'new')      return s.sort((a, b) => a.ticker.localeCompare(b.ticker));
-  if (filter === 'gainers')  return s.sort((a, b) => b.change24h - a.change24h);
-  if (filter === 'top')      return s.sort((a, b) => (b.floor * b.supply) - (a.floor * a.supply));
-  return s;
-}
-
-export default function MarketsView({ search }: { search: string }) {
-  const [filter, setFilter] = useState<FilterId>('trending');
+export default function MarketsView({
+  search, onSearch,
+}: {
+  search: string;
+  onSearch: (s: string) => void;
+}) {
   const [open, setOpen] = useState<Collection | null>(null);
 
+  // Sort by 24h volume — pump.fun "top volume" default.
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const base = q
@@ -53,40 +41,39 @@ export default function MarketsView({ search }: { search: string }) {
           c.name.toLowerCase().includes(q) ||
           c.slug.toLowerCase().includes(q))
       : COLLECTIONS;
-    return sortList(filter, base);
-  }, [filter, search]);
+    return [...base].sort((a, b) => b.volume24h - a.volume24h);
+  }, [search]);
 
   const movers = filtered.filter(c => c.change24h > 5).length;
 
   return (
     <div className="px-3 md:px-6 pt-3 pb-32 md:pb-12 max-w-3xl mx-auto">
-      {/* Filter chips */}
-      <div className="-mx-3 md:mx-0 px-3 md:px-0 mb-2 flex items-center gap-2 overflow-x-auto hide-scrollbar">
-        {FILTERS.map(f => {
-          const active = filter === f.id;
-          return (
-            <button
-              key={f.id}
-              onClick={() => setFilter(f.id)}
-              className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-[11px] font-display font-bold tracking-wider uppercase transition ${
-                active
-                  ? 'btn-sunset'
-                  : 'bg-white/4 border border-white/8 text-white/65 hover:text-white hover:border-pink-400/30'
-              }`}
-            >
-              <f.icon size={11}/>
-              {f.label}
-            </button>
-          );
-        })}
+      {/* SEARCH BAR — prominent, above the list */}
+      <div className="relative mb-2">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={16} />
+        <input
+          value={search}
+          onChange={e => onSearch(e.target.value)}
+          placeholder="Search tickers, collections…"
+          className="w-full bg-white/4 border border-white/8 hover:border-white/15 focus:border-pink-400/50 transition pl-11 pr-10 py-3 rounded-2xl outline-none text-sm font-mono placeholder:text-white/30"
+        />
+        {search && (
+          <button
+            onClick={() => onSearch('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-white/40 hover:text-white"
+            aria-label="Clear"
+          >
+            <X size={14} />
+          </button>
+        )}
       </div>
 
-      {/* "N new movers" pill (pump.fun style) */}
-      <button className="w-full mt-2 mb-1 bg-white/4 border border-white/8 hover:border-up/40 rounded-2xl py-2.5 flex items-center justify-center gap-2 text-up font-display font-bold text-sm transition">
+      {/* "N new movers" pill — pump.fun style */}
+      <button className="w-full mt-1 mb-1 bg-white/4 border border-white/8 hover:border-up/40 rounded-2xl py-2.5 flex items-center justify-center gap-2 text-up font-display font-bold text-sm transition">
         <ArrowUp size={14}/> {movers} new mover{movers === 1 ? '' : 's'}
       </button>
 
-      {/* List */}
+      {/* TOKEN LIST — sorted by volume */}
       <div className="divide-y divide-white/5">
         {filtered.length === 0 && (
           <div className="py-12 text-center text-sm text-white/40">No matches.</div>
@@ -144,7 +131,7 @@ function Row({ c, onTap }: { c: Collection; onTap: () => void }) {
         <Spark data={spark} up={up} w={72} h={36} strokeWidth={1.8} />
       </div>
 
-      {/* Floor price (the live, brand-correct value) + MC underneath */}
+      {/* Floor price + MC underneath */}
       <div className="text-right shrink-0 min-w-[72px]">
         <div className="font-display font-bold text-white text-[16px] leading-tight">
           {c.floor.toFixed(2)} <span className="text-sm opacity-85">Ξ</span>

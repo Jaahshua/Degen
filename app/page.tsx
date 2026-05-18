@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Marquee from './components/Marquee';
 import ProjectorTopBar from './components/ProjectorTopBar';
 import MarketsView from './components/MarketsView';
 import DropsView from './components/DropsView';
@@ -36,11 +35,10 @@ export default function DegenSea() {
     <div className="min-h-screen">
       {loading && <LoadingScreen onDone={finish} />}
 
-      <ProjectorTopBar view={view} onView={setView} search={search} onSearch={setSearch} />
-      <Marquee />
+      <ProjectorTopBar view={view} onView={setView} />
 
       <main className="pb-24 md:pb-12">
-        {view === 'markets'   && <MarketsView   search={search} />}
+        {view === 'markets'   && <MarketsView   search={search} onSearch={setSearch} />}
         {view === 'drops'     && <DropsView     search={search} />}
         {view === 'launchpad' && <LaunchpadView search={search} />}
       </main>
