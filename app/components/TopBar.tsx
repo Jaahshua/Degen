@@ -2,6 +2,7 @@
 
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Send, Bell } from 'lucide-react';
+import Logo from './Logo';
 
 export default function TopBar() {
   return (
@@ -38,15 +39,13 @@ export default function TopBar() {
         href="#"
         style={{
           position: 'relative',
-          fontWeight: 900,
-          fontSize: 22,
-          letterSpacing: '-0.03em',
           textDecoration: 'none',
-          textShadow: '0 0 16px rgba(255,61,138,0.45)',
+          display: 'flex',
+          alignItems: 'center',
         }}
+        aria-label="DEGENSEA"
       >
-        <span className="text-sunset">DEGEN</span>
-        <span style={{ color: '#fff' }}>SEA</span>
+        <Logo height={28} />
       </a>
 
       <div style={{ flex: 1 }} />

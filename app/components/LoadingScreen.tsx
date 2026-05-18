@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Loader from './Loader';
+import Logo from './Logo';
 
 const DURATION_MS = 4800;
 
@@ -78,23 +79,11 @@ export default function LoadingScreen({ onDone }: { onDone: () => void }) {
         ))}
       </div>
 
-      <div style={{ position: 'relative', textAlign: 'center' }}>
-        <h1
-          style={{
-            margin: 0,
-            fontSize: 56,
-            fontWeight: 900,
-            letterSpacing: '-0.04em',
-            lineHeight: 1,
-            textShadow: '0 0 24px rgba(255, 61, 138, 0.6)',
-          }}
-        >
-          <span className="text-sunset">DEGEN</span>
-          <span style={{ color: '#fff' }}>SEA</span>
-        </h1>
+      <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <Logo height={96} />
         <div
           style={{
-            marginTop: 12,
+            marginTop: 16,
             fontSize: 11,
             letterSpacing: '0.5em',
             color: 'rgba(255,255,255,0.45)',
