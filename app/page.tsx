@@ -1,29 +1,24 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import ProjectorTopBar from './components/ProjectorTopBar';
-import MarketsView from './components/MarketsView';
-import DropsView from './components/DropsView';
-import LaunchpadView from './components/LaunchpadView';
-import LoadingScreen from './components/LoadingScreen';
+import TopBar from './components/TopBar';
+import Markets from './components/Markets';
+import Drops from './components/Drops';
+import Launchpad from './components/Launchpad';
 import BottomNav from './components/BottomNav';
-import MobileSearchOverlay from './components/MobileSearchOverlay';
+import LoadingScreen from './components/LoadingScreen';
 
 export type View = 'markets' | 'drops' | 'launchpad';
 
-const KEY = 'degensea-entered-v2';
+const KEY = 'degensea-entered-v3';
 
 export default function DegenSea() {
   const [view, setView] = useState<View>('markets');
-  const [search, setSearch] = useState('');
-  const [searchOpen, setSearchOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    try {
-      if (sessionStorage.getItem(KEY) === '1') setLoading(false);
-    } catch {}
+    try { if (sessionStorage.getItem(KEY) === '1') setLoading(false); } catch {}
   }, []);
 
   const finish = () => {
@@ -32,24 +27,18 @@ export default function DegenSea() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div style={{ minHeight: '100vh' }}>
       {loading && <LoadingScreen onDone={finish} />}
 
-      <ProjectorTopBar view={view} onView={setView} />
+      <TopBar />
 
-      <main className="pb-24 md:pb-12">
-        {view === 'markets'   && <MarketsView   search={search} onSearch={setSearch} />}
-        {view === 'drops'     && <DropsView     search={search} />}
-        {view === 'launchpad' && <LaunchpadView search={search} />}
+      <main style={{ paddingBottom: 16 }}>
+        {view === 'markets'   && <Markets />}
+        {view === 'drops'     && <Drops />}
+        {view === 'launchpad' && <Launchpad />}
       </main>
 
-      <BottomNav view={view} onView={setView} onSearch={() => setSearchOpen(true)} />
-      <MobileSearchOverlay
-        open={searchOpen}
-        value={search}
-        onChange={setSearch}
-        onClose={() => setSearchOpen(false)}
-      />
+      <BottomNav view={view} onView={setView} />
     </div>
   );
 }
