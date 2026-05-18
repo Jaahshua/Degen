@@ -2,13 +2,16 @@
 
 import { useState } from 'react';
 
+const DRIVE_URL = 'https://drive.google.com/thumbnail?id=1IW2DicPl-aSJjxo7wbpN8k8Dkvi5FDha&sz=w1024';
+
 /**
- * Renders /degensea-logo.png. If the file isn't present in /public,
- * falls back to the gradient text so the page is never broken.
- *
- * Sized by an explicit `height` prop (px). Width auto-scales to the
- * image's aspect ratio so the logo never gets distorted.
+ * Tries /degensea-logo.png first (so once it's committed to /public it
+ * takes over automatically), then falls back to the Google Drive
+ * thumbnail URL (works immediately since the file is shared publicly),
+ * then to gradient text if both fail.
  */
+type Stage = 'local' | 'drive' | 'text';
+
 export default function Logo({
   height = 32,
   glow = true,
@@ -16,16 +19,16 @@ export default function Logo({
   height?: number;
   glow?: boolean;
 }) {
-  const [errored, setErrored] = useState(false);
+  const [stage, setStage] = useState<Stage>('local');
 
-  if (errored) {
+  if (stage === 'text') {
     return (
       <span
         style={{
           fontSize: height * 0.78,
           fontWeight: 900,
           letterSpacing: '-0.03em',
-          textShadow: glow ? '0 0 16px rgba(255,61,138,0.5)' : 'none',
+          textShadow: glow ? '0 0 16px rgba(220,38,38,0.55)' : 'none',
           lineHeight: 1,
           display: 'inline-block',
         }}
@@ -36,17 +39,19 @@ export default function Logo({
     );
   }
 
+  const src = stage === 'local' ? '/degensea-logo.png' : DRIVE_URL;
+
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src="/degensea-logo.png"
+      src={src}
       alt="DEGENSEA"
-      onError={() => setErrored(true)}
+      onError={() => setStage(s => (s === 'local' ? 'drive' : 'text'))}
       style={{
         height,
         width: 'auto',
         display: 'block',
-        filter: glow ? 'drop-shadow(0 6px 20px rgba(255,61,138,0.35))' : 'none',
+        filter: glow ? 'drop-shadow(0 6px 24px rgba(220,38,38,0.45))' : 'none',
       }}
     />
   );

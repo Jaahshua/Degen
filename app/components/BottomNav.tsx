@@ -53,20 +53,10 @@ export default function BottomNav({
               return (
                 <button
                   onClick={openConnectModal}
-                  style={{
-                    padding: '6px 16px',
-                    borderRadius: 999,
-                    background: 'linear-gradient(135deg, #d63384 0%, #ff3d8a 50%, #ff7e5f 100%)',
-                    color: '#fff',
-                    fontSize: 14,
-                    fontWeight: 900,
-                    letterSpacing: '0.04em',
-                    border: 'none',
-                    cursor: 'pointer',
-                    boxShadow: '0 8px 24px -10px rgba(255,61,138,0.7)',
-                  }}
+                  className="btn-blood"
+                  style={{ padding: '6px 16px', fontSize: 13 }}
                 >
-                  $ Deposit
+                  <span>$ Deposit</span>
                 </button>
               );
             }

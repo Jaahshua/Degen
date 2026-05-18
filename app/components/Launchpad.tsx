@@ -39,18 +39,10 @@ export default function Launchpad() {
           Anyone can launch on a bonding curve. Buy early, sell into momentum, graduate to mainnet.
         </p>
         <button
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            marginTop: 14,
-            padding: '10px 18px',
-            borderRadius: 999,
-            background: 'linear-gradient(135deg, #d63384 0%, #ff3d8a 50%, #ff7e5f 100%)',
-            color: '#fff', fontWeight: 900, fontSize: 13, letterSpacing: '0.05em',
-            textTransform: 'uppercase', border: 'none', cursor: 'pointer',
-            boxShadow: '0 8px 24px -10px rgba(255,61,138,0.7)',
-          }}
+          className="btn-blood"
+          style={{ marginTop: 14, padding: '10px 18px', fontSize: 13 }}
         >
-          <Rocket size={13}/> Launch new token
+          <Rocket size={13}/> <span>Launch new token</span>
         </button>
       </div>
 
@@ -151,16 +143,10 @@ function Card({ t }: { t: LaunchToken }) {
           <span className="text-sunset" style={{ fontWeight: 700 }}>{t.bondingPct}%</span>
         </div>
         <button
-          style={{
-            width: '100%', marginTop: 10,
-            padding: '8px 0', borderRadius: 999,
-            background: 'linear-gradient(135deg, #d63384 0%, #ff3d8a 50%, #ff7e5f 100%)',
-            color: '#fff', fontWeight: 800, fontSize: 12,
-            letterSpacing: '0.05em', textTransform: 'uppercase',
-            border: 'none', cursor: 'pointer',
-          }}
+          className="btn-blood"
+          style={{ width: '100%', marginTop: 10, padding: '8px 0', fontSize: 12 }}
         >
-          Buy {t.ticker}
+          <span>Buy {t.ticker}</span>
         </button>
       </div>
     </div>

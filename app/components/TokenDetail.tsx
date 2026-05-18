@@ -431,21 +431,10 @@ export default function TokenDetail({ c, onClose }: { c: Collection; onClose: ()
           }}
         >
           <button
-            style={{
-              width: '100%',
-              padding: '14px 0',
-              borderRadius: 999,
-              background: '#fff',
-              color: '#000',
-              fontWeight: 900,
-              fontSize: 15,
-              letterSpacing: '0.05em',
-              textTransform: 'uppercase',
-              border: 'none',
-              cursor: 'pointer',
-            }}
+            className="btn-blood"
+            style={{ width: '100%', padding: '14px 0', fontSize: 15 }}
           >
-            Buy {c.ticker} · {floor.toFixed(2)} Ξ
+            <span>Buy {c.ticker} · {floor.toFixed(2)} Ξ</span>
           </button>
         </div>
       </div>

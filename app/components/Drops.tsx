@@ -136,19 +136,25 @@ function Card({ d, remaining }: { d: Drop; remaining: number }) {
           <Clock size={12}/>
           {remaining === 0 ? 'LIVE' : formatCountdown(remaining)}
         </div>
-        <button
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            padding: '6px 12px', borderRadius: 999,
-            background: remaining === 0 ? '#ff3d8a' : 'rgba(255,255,255,0.06)',
-            color: remaining === 0 ? '#fff' : 'rgba(255,255,255,0.85)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
-            cursor: 'pointer',
-          }}
-        >
-          {remaining === 0 ? <>Mint <ArrowUpRight size={11}/></> : <>Remind <Bell size={11}/></>}
-        </button>
+        {remaining === 0 ? (
+          <button className="btn-blood" style={{ padding: '6px 14px', fontSize: 11 }}>
+            <span>Mint</span> <ArrowUpRight size={11}/>
+          </button>
+        ) : (
+          <button
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              padding: '6px 12px', borderRadius: 999,
+              background: 'rgba(255,255,255,0.06)',
+              color: 'rgba(255,255,255,0.85)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
+              cursor: 'pointer',
+            }}
+          >
+            Remind <Bell size={11}/>
+          </button>
+        )}
       </div>
     </div>
   );
