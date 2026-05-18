@@ -209,8 +209,9 @@ body {
 }
 
 @media (max-width: 768px) {
-  .projector-beam { width: 72%; }
-  .projector-spot { width: 52%; }
+  .projector-beam { width: 48%; opacity: 0.55; }
+  .projector-spot { width: 38%; opacity: 0.6; }
+  .projector-grain { opacity: 0.08; }
 }
 
 /* ============ CARDS ============ */
