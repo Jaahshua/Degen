@@ -13,6 +13,7 @@ import {
 import Candle, { type Unit, type Mode } from './Candle';
 import Thumb from './Thumb';
 import { useWalletGate } from '../hooks/useWalletGate';
+import { useOpenSeaStream } from '../hooks/useOpenSeaStream';
 import { toast } from './Toast';
 
 const ETH_USD = 3000;
@@ -103,6 +104,25 @@ export default function TokenDetail({ c, onClose }: { c: Collection; onClose: ()
     }, POLL_MS);
     return () => clearInterval(id);
   }, [c]);
+
+  // Live stream from the OpenSea relay (Railway). No-op when
+  // NEXT_PUBLIC_STREAM_URL isn't set. For now we listen to listings
+  // and let any new listing at or below floor drive floor down.
+  useOpenSeaStream(c.slug, (event) => {
+    if (event.event_type !== 'item_listed') return;
+    const wei  = event.payload?.base_price;
+    const dec  = event.payload?.payment_token?.decimals ?? 18;
+    if (!wei) return;
+    const price = Number(wei) / Math.pow(10, dec);
+    if (!Number.isFinite(price) || price <= 0) return;
+    setLive(prev => {
+      if (!prev.floor || price < prev.floor) {
+        return { ...prev, floor: price };
+      }
+      return prev;
+    });
+    setNow(Date.now());
+  });
 
   // Regenerate full candle series when TF or slug changes
   useEffect(() => {
