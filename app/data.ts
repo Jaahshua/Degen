@@ -11,6 +11,76 @@ export type Collection = {
 };
 
 /**
+ * Look up an arbitrary OpenSea slug (not in our curated list) and
+ * return a hydrated Collection, or null if both endpoints come back
+ * empty (slug doesn't exist or got rate-limited). Used by the search
+ * box so users can pull up *any* collection by its OpenSea slug.
+ */
+export async function searchOpenSeaSlug(slug: string): Promise<Collection | null> {
+  const headers = { Accept: 'application/json' };
+  const safe = async (url: string) => {
+    try {
+      const r = await fetch(url, { headers });
+      if (!r.ok) return null;
+      return await r.json();
+    } catch { return null; }
+  };
+
+  const [stats, meta] = await Promise.all([
+    safe(`https://api.opensea.io/api/v2/collections/${slug}/stats`),
+    safe(`https://api.opensea.io/api/v2/collections/${slug}`),
+  ]);
+  if (!stats && !meta) return null;
+
+  const oneDay = stats?.intervals?.find((i: any) => i.interval === 'one_day');
+  const name = meta?.name || slug;
+  return {
+    slug,
+    name,
+    ticker: deriveTicker(name, slug),
+    imageUrl: meta?.image_url,
+    floor:     Number(stats?.total?.floor_price) || 0,
+    volume24h: Number(oneDay?.volume) || 0,
+    change24h: Number(oneDay?.volume_change) || 0,
+    owners:    Number(stats?.total?.num_owners) || 0,
+    supply:    Number(meta?.total_supply) || 10000,
+  };
+}
+
+function deriveTicker(name: string, slug: string): string {
+  const cleaned = name.replace(/[^a-zA-Z0-9 ]/g, '').trim();
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  if (words.length >= 2) {
+    return words.map(w => w[0]).join('').toUpperCase().slice(0, 6);
+  }
+  if (words.length === 1) return words[0].toUpperCase().slice(0, 6);
+  return slug.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+}
+
+/**
+ * Try a few slug variants for a free-text query (lowercase, hyphenated,
+ * collapsed) and return the first hit, or null.
+ */
+export async function searchOpenSea(query: string): Promise<Collection | null> {
+  const q = query.trim().toLowerCase();
+  if (!q) return null;
+
+  const variants = Array.from(new Set([
+    q,                                            // as-is
+    q.replace(/\s+/g, '-'),                       // spaces -> hyphens
+    q.replace(/\s+/g, ''),                        // no spaces
+    q.replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, ''),
+    q.replace(/[^a-z0-9]/g, ''),                  // alphanumeric only
+  ].filter(Boolean)));
+
+  for (const slug of variants) {
+    const hit = await searchOpenSeaSlug(slug);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/**
  * Live-fetch OpenSea stats + metadata for a single slug. Returns a
  * merged Collection where any field OpenSea returned overrides the
  * fallback. Used by Markets, Drops, and TokenDetail so they all share

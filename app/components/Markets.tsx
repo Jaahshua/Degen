@@ -1,8 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { Sprout, Search as SearchIcon, X } from 'lucide-react';
-import { COLLECTIONS, fetchOpenSeaCollection, type Collection } from '../data';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Sprout, Search as SearchIcon, X, Loader2 } from 'lucide-react';
+import {
+  COLLECTIONS, fetchOpenSeaCollection, searchOpenSea,
+  type Collection,
+} from '../data';
 import Spark, { sparkline } from './Spark';
 import TokenDetail from './TokenDetail';
 import Thumb from './Thumb';
@@ -29,8 +32,10 @@ export default function Markets() {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState<Collection | null>(null);
   const [live, setLive] = useState<Record<string, Collection>>({});
+  const [extra, setExtra] = useState<Collection | null>(null);
+  const [searching, setSearching] = useState(false);
 
-  // Pull live floor/volume/image for every collection on mount.
+  // Live-pull every curated collection on mount.
   useEffect(() => {
     let cancelled = false;
     Promise.all(COLLECTIONS.map(fetchOpenSeaCollection)).then(rows => {
@@ -47,19 +52,46 @@ export default function Markets() {
     [live],
   );
 
+  const q = search.trim().toLowerCase();
+
+  const localMatches = useMemo(() => {
+    if (!q) return merged;
+    return merged.filter(c =>
+      c.ticker.toLowerCase().includes(q) ||
+      c.name.toLowerCase().includes(q) ||
+      c.slug.toLowerCase().includes(q));
+  }, [merged, q]);
+
+  // Free-text OpenSea search — only when query is non-empty AND nothing
+  // already matches locally AND we haven't already pulled this slug.
+  const debounceRef = useRef<number | null>(null);
+  useEffect(() => {
+    setExtra(null);
+    if (!q) { setSearching(false); return; }
+    if (localMatches.length > 0) { setSearching(false); return; }
+
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(async () => {
+      setSearching(true);
+      const result = await searchOpenSea(q);
+      setExtra(result);
+      setSearching(false);
+    }, 450);
+
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    };
+  }, [q, localMatches.length]);
+
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const base = q
-      ? merged.filter(c =>
-          c.ticker.toLowerCase().includes(q) ||
-          c.name.toLowerCase().includes(q) ||
-          c.slug.toLowerCase().includes(q))
-      : merged;
-    return [...base].sort((a, b) => b.volume24h - a.volume24h);
-  }, [merged, search]);
+    if (!q) return [...localMatches].sort((a, b) => b.volume24h - a.volume24h);
+    const list = [...localMatches];
+    if (extra && !list.find(c => c.slug === extra.slug)) list.unshift(extra);
+    return list;
+  }, [localMatches, extra, q]);
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '12px 12px 120px' }}>
+    <div style={{ maxWidth: 720, margin: '0 auto', padding: '0 12px 120px' }}>
       <div
         style={{
           position: 'sticky',
@@ -67,66 +99,112 @@ export default function Markets() {
           zIndex: 30,
           background: '#000',
           margin: '0 -12px',
-          padding: '8px 12px 8px',
+          padding: '12px 12px',
           borderBottom: '1px solid rgba(255,255,255,0.05)',
         }}
       >
         <div style={{ position: 'relative' }}>
-        <SearchIcon
-          size={16}
-          style={{
-            position: 'absolute',
-            left: 14,
-            top: '50%',
-            transform: 'translateY(-50%)',
-            color: 'rgba(255,255,255,0.4)',
-            pointerEvents: 'none',
-          }}
-        />
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search tickers, collections…"
-          style={{
-            width: '100%',
-            padding: '12px 40px 12px 40px',
-            borderRadius: 16,
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            color: '#fff',
-            fontSize: 14,
-            fontFamily: 'var(--font-mono), monospace',
-            outline: 'none',
-          }}
-        />
-        {search && (
-          <button
-            onClick={() => setSearch('')}
-            aria-label="Clear"
+          <SearchIcon
+            size={16}
             style={{
               position: 'absolute',
-              right: 10,
+              left: 14,
               top: '50%',
               transform: 'translateY(-50%)',
-              width: 28,
-              height: 28,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'transparent',
-              border: 'none',
               color: 'rgba(255,255,255,0.4)',
-              cursor: 'pointer',
+              pointerEvents: 'none',
+            }}
+          />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search any OpenSea collection…"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+            style={{
+              width: '100%',
+              padding: '12px 40px 12px 40px',
+              borderRadius: 16,
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              color: '#fff',
+              fontSize: 16, // 16px is the iOS no-zoom threshold
+              fontFamily: 'var(--font-mono), monospace',
+              outline: 'none',
+              appearance: 'none',
+              WebkitAppearance: 'none',
+            }}
+          />
+          {searching ? (
+            <Loader2
+              size={14}
+              style={{
+                position: 'absolute',
+                right: 12,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'rgba(255,255,255,0.45)',
+                animation: 'spin 1s linear infinite',
+              }}
+            />
+          ) : search ? (
+            <button
+              onClick={() => setSearch('')}
+              aria-label="Clear"
+              style={{
+                position: 'absolute',
+                right: 10,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: 28,
+                height: 28,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'transparent',
+                border: 'none',
+                color: 'rgba(255,255,255,0.4)',
+                cursor: 'pointer',
+              }}
+            >
+              <X size={14} />
+            </button>
+          ) : null}
+        </div>
+
+        {q && extra && (
+          <div
+            style={{
+              marginTop: 6,
+              fontSize: 10,
+              letterSpacing: '0.18em',
+              textTransform: 'uppercase',
+              color: 'var(--up)',
+              fontFamily: 'var(--font-mono), monospace',
             }}
           >
-            <X size={14} />
-          </button>
+            ✓ Found on OpenSea
+          </div>
         )}
-        </div>
+        {q && !searching && !extra && localMatches.length === 0 && (
+          <div
+            style={{
+              marginTop: 6,
+              fontSize: 10,
+              letterSpacing: '0.18em',
+              textTransform: 'uppercase',
+              color: 'rgba(255,255,255,0.4)',
+              fontFamily: 'var(--font-mono), monospace',
+            }}
+          >
+            No collection found
+          </div>
+        )}
       </div>
 
       <div>
-        {filtered.length === 0 && (
+        {filtered.length === 0 && !searching && (
           <div style={{ padding: '48px 0', textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>
             No matches.
           </div>
