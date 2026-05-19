@@ -60,7 +60,18 @@ export default function Markets() {
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '12px 12px 120px' }}>
-      <div style={{ position: 'relative', marginBottom: 8 }}>
+      <div
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 30,
+          background: '#000',
+          margin: '0 -12px',
+          padding: '8px 12px 8px',
+          borderBottom: '1px solid rgba(255,255,255,0.05)',
+        }}
+      >
+        <div style={{ position: 'relative' }}>
         <SearchIcon
           size={16}
           style={{
@@ -111,6 +122,7 @@ export default function Markets() {
             <X size={14} />
           </button>
         )}
+        </div>
       </div>
 
       <div>

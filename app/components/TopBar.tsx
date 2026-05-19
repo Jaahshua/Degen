@@ -12,12 +12,12 @@ export default function TopBar() {
         position: 'sticky',
         top: 0,
         zIndex: 50,
-        height: 160,
+        minHeight: 64,
         background: '#000',
         borderBottom: '1px solid rgba(255,255,255,0.05)',
         display: 'flex',
         alignItems: 'center',
-        padding: '0 16px',
+        padding: '8px 16px',
         gap: 10,
       }}
     >
@@ -46,7 +46,7 @@ export default function TopBar() {
         }}
         aria-label="DEGENSEA"
       >
-        <Logo height={144} />
+        <Logo height={80} />
       </a>
 
       <div style={{ flex: 1 }} />

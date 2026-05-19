@@ -220,11 +220,16 @@ export function generateHolders(slug: string, supply: number, count = 8): Holder
 
 export type Candle = { o: number; h: number; l: number; c: number };
 
-export function generateCandles(slug: string, basePrice: number, count = 60): Candle[] {
+export function generateCandles(
+  slug: string,
+  basePrice: number,
+  count = 60,
+  volMul = 1,
+): Candle[] {
   let seed = 0;
   for (let i = 0; i < slug.length; i++) seed = (seed * 31 + slug.charCodeAt(i)) | 0;
   const out: Candle[] = [];
-  let price = basePrice * 0.92;
+  let price = basePrice * (1 - 0.04 * volMul);
   for (let i = 0; i < count; i++) {
     seed = (seed * 1664525 + 1013904223) | 0;
     const r  = (Math.abs(seed)             % 10000) / 10000;
@@ -234,9 +239,9 @@ export function generateCandles(slug: string, basePrice: number, count = 60): Ca
     const r3 = (Math.abs(seed ^ 0x7f4a7c15) % 10000) / 10000;
 
     const open  = price;
-    const trend = (i / count - 0.35) * basePrice * 0.0035;
-    const close = open + (r - 0.5) * basePrice * 0.018 + trend;
-    const wick  = basePrice * 0.012 * (0.4 + r2);
+    const trend = (i / count - 0.35) * basePrice * 0.0035 * volMul;
+    const close = open + (r - 0.5) * basePrice * 0.018 * volMul + trend;
+    const wick  = basePrice * 0.012 * volMul * (0.4 + r2);
     const hi    = Math.max(open, close) + wick * r2;
     const lo    = Math.min(open, close) - wick * (1 - r3) * 0.9;
     out.push({ o: open, h: hi, l: lo, c: close });
