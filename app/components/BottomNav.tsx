@@ -1,6 +1,6 @@
 'use client';
 
-import { LineChart, Flame, Search, Rocket, User } from 'lucide-react';
+import { LineChart, Network, Search, Crosshair, User } from 'lucide-react';
 import { ConnectButton, useAccountModal, useConnectModal } from '@rainbow-me/rainbowkit';
 import { useAccount } from 'wagmi';
 import type { View } from '../page';
@@ -113,11 +113,11 @@ export default function BottomNav({
           paddingBottom: 'max(8px, env(safe-area-inset-bottom))',
         }}
       >
-        <Tab icon={<LineChart size={20}/>} label="Markets" active={view === 'markets'} onClick={() => onView('markets')} />
-        <Tab icon={<Flame size={20}/>}     label="Drops"   active={view === 'drops'}    onClick={() => onView('drops')} />
-        <CenterTab active={view === 'launchpad'} onClick={() => onView('launchpad')} />
-        <Tab icon={<Search size={20}/>}    label="Search"  onClick={onSearch} />
-        <Tab icon={<User size={20}/>}      label="Account" onClick={onAccount} />
+        <Tab icon={<LineChart size={20} />}  label="Markets" active={view === 'markets'} onClick={() => onView('markets')} />
+        <Tab icon={<Network   size={20} />}  label="Bubbles" active={view === 'bubbles'} onClick={() => onView('bubbles')} />
+        <CenterTab active={view === 'sniper'} onClick={() => onView('sniper')} />
+        <Tab icon={<Search    size={20} />}  label="Search"  onClick={onSearch} />
+        <Tab icon={<User      size={20} />}  label="Account" onClick={onAccount} />
       </nav>
     </div>
   );
@@ -163,13 +163,13 @@ function CenterTab({ active, onClick }: { active?: boolean; onClick: () => void 
       <div
         style={{
           width: 50, height: 50, borderRadius: 999,
-          background: 'linear-gradient(135deg, #d63384 0%, #ff3d8a 50%, #ff7e5f 100%)',
+          background: 'linear-gradient(135deg, #7f1d1d 0%, #dc2626 50%, #fbbf24 100%)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 8px 24px -8px rgba(255,61,138,0.7)',
-          border: active ? '2px solid rgba(255,255,255,0.4)' : 'none',
+          boxShadow: '0 8px 24px -8px rgba(220,38,38,0.75)',
+          border: active ? '2px solid rgba(255,255,255,0.45)' : 'none',
         }}
       >
-        <Rocket size={22} color="#fff" />
+        <Crosshair size={22} color="#fff" />
       </div>
       <span
         style={{
@@ -181,7 +181,7 @@ function CenterTab({ active, onClick }: { active?: boolean; onClick: () => void 
           marginTop: 4,
         }}
       >
-        Launch
+        Sniper
       </span>
     </button>
   );

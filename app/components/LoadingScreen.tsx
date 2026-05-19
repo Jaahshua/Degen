@@ -80,7 +80,7 @@ export default function LoadingScreen({ onDone }: { onDone: () => void }) {
       </div>
 
       <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-        <Logo height={192} />
+        <Logo height={96} />
         <div
           style={{
             marginTop: 16,

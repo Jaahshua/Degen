@@ -3,17 +3,16 @@
 import { useState } from 'react';
 import TopBar from './components/TopBar';
 import Markets from './components/Markets';
-import Drops from './components/Drops';
-import Launchpad from './components/Launchpad';
+import Bubbles from './components/Bubbles';
+import Sniper from './components/Sniper';
 import BottomNav from './components/BottomNav';
 import LoadingScreen from './components/LoadingScreen';
 import Toast from './components/Toast';
 
-export type View = 'markets' | 'drops' | 'launchpad';
+export type View = 'markets' | 'bubbles' | 'sniper';
 
 export default function DegenSea() {
   const [view, setView] = useState<View>('markets');
-  // Always show the loading screen on every page refresh.
   const [loading, setLoading] = useState(true);
 
   return (
@@ -23,9 +22,9 @@ export default function DegenSea() {
       <TopBar />
 
       <main style={{ paddingBottom: 16 }}>
-        {view === 'markets'   && <Markets />}
-        {view === 'drops'     && <Drops />}
-        {view === 'launchpad' && <Launchpad />}
+        {view === 'markets' && <Markets />}
+        {view === 'bubbles' && <Bubbles />}
+        {view === 'sniper'  && <Sniper />}
       </main>
 
       <BottomNav view={view} onView={setView} />
@@ -33,4 +32,3 @@ export default function DegenSea() {
     </div>
   );
 }
-

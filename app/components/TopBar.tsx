@@ -46,7 +46,7 @@ export default function TopBar() {
         }}
         aria-label="DEGENSEA"
       >
-        <Logo height={56} />
+        <Logo height={34} />
       </a>
 
       <div style={{ flex: 1 }} />

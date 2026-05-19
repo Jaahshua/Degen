@@ -80,6 +80,158 @@ export async function searchOpenSea(query: string): Promise<Collection | null> {
   return null;
 }
 
+/* ============================================================
+   BUBBLE MAP — synthetic top-holder data for the wallet tracker.
+   Used by the Bubbles view. Marked synthetic because OpenSea's
+   per-wallet holdings endpoint needs auth; we can wire that up
+   later with NEXT_PUBLIC_OPENSEA_API_KEY.
+   ============================================================ */
+
+export type Wallet = {
+  id: number;
+  address: string;
+  holdings: number;
+  cluster: number;   // 0 = standalone, 1+ = part of a suspicious cluster
+};
+
+export function generateBubbleMap(slug: string, supply: number, count = 36): Wallet[] {
+  let seed = 0;
+  for (let i = 0; i < slug.length; i++) seed = (seed * 31 + slug.charCodeAt(i)) | 0;
+  const rand = () => {
+    seed = (seed * 1664525 + 1013904223) | 0;
+    return (Math.abs(seed) % 10000) / 10000;
+  };
+
+  const wallets: Wallet[] = [];
+  for (let i = 0; i < count; i++) {
+    // Pareto-ish tail: top wallets hold a lot, fall off fast
+    const share = Math.pow(0.86, i) * 0.08 * (0.6 + rand() * 0.8);
+    const holdings = Math.max(1, Math.round(supply * share));
+    // ~30% land in one of three clusters; the rest are standalone
+    const r = rand();
+    const cluster =
+      r < 0.10 ? 1 :  // suspicious / dev wallets
+      r < 0.20 ? 2 :  // insider cluster
+      r < 0.30 ? 3 :  // whale cluster
+      0;
+    wallets.push({
+      id: i,
+      address: makeAddr(seed ^ (i * 7919)),
+      holdings,
+      cluster,
+    });
+  }
+  return wallets;
+}
+
+export type BubblePos = { x: number; y: number; r: number };
+
+export function layoutBubbles(
+  wallets: Wallet[],
+  width: number,
+  height: number,
+  iterations = 140,
+): BubblePos[] {
+  const N = wallets.length;
+  if (N === 0) return [];
+
+  // Radius scaled by sqrt(holdings) so visual area ≈ proportional to holdings.
+  const maxH = Math.max(...wallets.map(w => w.holdings));
+  const minR = 8;
+  const maxR = Math.min(width, height) * 0.13;
+  const radii = wallets.map(w => minR + (maxR - minR) * Math.sqrt(w.holdings / maxH));
+
+  // Seeded layout: spread around the center on a spiral so the
+  // simulation starts from a stable shape every time.
+  const positions = wallets.map((_, i) => {
+    const a = i * 2.4;
+    const d = 12 + i * 4;
+    return {
+      x: width / 2 + Math.cos(a) * d,
+      y: height / 2 + Math.sin(a) * d,
+      vx: 0,
+      vy: 0,
+    };
+  });
+
+  for (let iter = 0; iter < iterations; iter++) {
+    for (let i = 0; i < N; i++) {
+      let fx = 0, fy = 0;
+
+      // Soft pull toward center
+      fx += (width / 2 - positions[i].x) * 0.012;
+      fy += (height / 2 - positions[i].y) * 0.012;
+
+      // Mutual repulsion / collision
+      for (let j = 0; j < N; j++) {
+        if (i === j) continue;
+        const dx = positions[i].x - positions[j].x;
+        const dy = positions[i].y - positions[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy) || 0.01;
+        const minDist = radii[i] + radii[j] + 4;
+        if (dist < minDist) {
+          const push = (minDist - dist) / dist * 0.45;
+          fx += dx * push;
+          fy += dy * push;
+        }
+      }
+
+      // Cluster cohesion: same-cluster wallets pull each other together
+      const cluster = wallets[i].cluster;
+      if (cluster > 0) {
+        for (let j = 0; j < N; j++) {
+          if (i === j || wallets[j].cluster !== cluster) continue;
+          fx += (positions[j].x - positions[i].x) * 0.014;
+          fy += (positions[j].y - positions[i].y) * 0.014;
+        }
+      }
+
+      positions[i].vx = (positions[i].vx + fx) * 0.7;
+      positions[i].vy = (positions[i].vy + fy) * 0.7;
+    }
+    for (let i = 0; i < N; i++) {
+      positions[i].x += positions[i].vx;
+      positions[i].y += positions[i].vy;
+      // Clamp to canvas
+      positions[i].x = Math.max(radii[i] + 2, Math.min(width  - radii[i] - 2, positions[i].x));
+      positions[i].y = Math.max(radii[i] + 2, Math.min(height - radii[i] - 2, positions[i].y));
+    }
+  }
+
+  return positions.map((p, i) => ({ x: p.x, y: p.y, r: radii[i] }));
+}
+
+/* ============================================================
+   SNIPER BOT — persistable per-user sniper configurations,
+   stored in localStorage. Real execution requires wallet +
+   mempool / RPC plumbing; this models the user-facing config
+   and tracks status.
+   ============================================================ */
+
+export type Sniper = {
+  id: string;
+  slug: string;
+  name: string;
+  trigger: 'mint-live' | 'floor-below';
+  triggerValue?: number;       // ETH for floor-below
+  maxPrice: number;            // max Ξ per item
+  quantity: number;
+  gas: 'standard' | 'fast' | 'instant';
+  network: 'ethereum' | 'base';
+  createdAt: number;
+  status: 'watching' | 'triggered' | 'stopped' | 'done';
+  triggeredAt?: number;
+};
+
+const SNIPER_KEY = 'degensea-snipers';
+
+export function readSnipers(): Sniper[] {
+  try { return JSON.parse(localStorage.getItem(SNIPER_KEY) || '[]'); } catch { return []; }
+}
+export function writeSnipers(list: Sniper[]) {
+  try { localStorage.setItem(SNIPER_KEY, JSON.stringify(list)); } catch {}
+}
+
 /**
  * Live-fetch OpenSea stats + metadata for a single slug. Returns a
  * merged Collection where any field OpenSea returned overrides the
