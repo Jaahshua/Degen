@@ -8,6 +8,7 @@ import {
 } from '../data';
 import Spark, { sparkline } from './Spark';
 import TokenDetail from './TokenDetail';
+import Thumb from './Thumb';
 
 const ETH_USD = 3000;
 
@@ -104,6 +105,7 @@ export default function Drops() {
                   volume24h: item.volume24h,
                   owners: item.owners,
                   supply: item.supply,
+                  imageUrl: item.imageUrl,
                 })
               }
             />
@@ -120,8 +122,6 @@ function Row({ item, onTap }: { item: Trending; onTap: () => void }) {
   const up = item.change24h >= 0;
   const spark = sparkline(item.floor, item.change24h, 26);
   const mcUsd = item.floor * item.supply * ETH_USD;
-  const hueA = (item.ticker.charCodeAt(0) * 23) % 360;
-  const hueB = (item.ticker.charCodeAt(1) * 41) % 360;
 
   return (
     <button
@@ -140,7 +140,17 @@ function Row({ item, onTap }: { item: Trending; onTap: () => void }) {
         textAlign: 'left',
       }}
     >
-      <Thumb item={item} hueA={hueA} hueB={hueB} />
+      <Thumb collection={{
+        slug: item.slug,
+        ticker: item.ticker,
+        name: item.name,
+        floor: item.floor,
+        change24h: item.change24h,
+        volume24h: item.volume24h,
+        owners: item.owners,
+        supply: item.supply,
+        imageUrl: item.imageUrl,
+      }} />
 
       <div style={{ minWidth: 0 }}>
         <div
@@ -185,65 +195,6 @@ function Row({ item, onTap }: { item: Trending; onTap: () => void }) {
         </div>
       </div>
     </button>
-  );
-}
-
-function Thumb({ item, hueA, hueB }: { item: Trending; hueA: number; hueB: number }) {
-  const [errored, setErrored] = useState(false);
-  if (item.imageUrl && !errored) {
-    return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={item.imageUrl}
-        alt={item.name}
-        onError={() => setErrored(true)}
-        style={{
-          width: 56,
-          height: 56,
-          borderRadius: 16,
-          objectFit: 'cover',
-          flexShrink: 0,
-          display: 'block',
-        }}
-      />
-    );
-  }
-  return (
-    <div
-      style={{
-        width: 56,
-        height: 56,
-        borderRadius: 16,
-        background: `linear-gradient(135deg, hsl(${hueA} 70% 45%), hsl(${hueB} 70% 55%))`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0,
-        position: 'relative',
-        overflow: 'hidden',
-      }}
-    >
-      <span
-        aria-hidden
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'radial-gradient(circle at 25% 25%, rgba(255,255,255,0.25) 0%, transparent 45%)',
-        }}
-      />
-      <span
-        style={{
-          position: 'relative',
-          color: '#fff',
-          fontWeight: 900,
-          fontSize: 18,
-          letterSpacing: '-0.02em',
-          textShadow: '0 2px 6px rgba(0,0,0,0.55)',
-        }}
-      >
-        {item.ticker.slice(0, 2)}
-      </span>
-    </div>
   );
 }
 

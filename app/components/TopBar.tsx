@@ -12,13 +12,13 @@ export default function TopBar() {
         position: 'sticky',
         top: 0,
         zIndex: 50,
-        height: 88,
+        height: 160,
         background: '#000',
         borderBottom: '1px solid rgba(255,255,255,0.05)',
         display: 'flex',
         alignItems: 'center',
         padding: '0 16px',
-        gap: 12,
+        gap: 10,
       }}
     >
       {/* Subtle sunset glow in corner */}
@@ -46,7 +46,7 @@ export default function TopBar() {
         }}
         aria-label="DEGENSEA"
       >
-        <Logo height={72} />
+        <Logo height={144} />
       </a>
 
       <div style={{ flex: 1 }} />
@@ -56,8 +56,8 @@ export default function TopBar() {
         onClick={() => toast('Activity feed coming soon')}
         style={{
           position: 'relative',
-          width: 36,
-          height: 36,
+          width: 29,
+          height: 29,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -67,7 +67,7 @@ export default function TopBar() {
           cursor: 'pointer',
         }}
       >
-        <Send size={18} />
+        <Send size={14} />
       </button>
 
       <button
@@ -75,8 +75,8 @@ export default function TopBar() {
         onClick={() => toast('No new alerts')}
         style={{
           position: 'relative',
-          width: 36,
-          height: 36,
+          width: 29,
+          height: 29,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -86,7 +86,7 @@ export default function TopBar() {
           cursor: 'pointer',
         }}
       >
-        <Bell size={18} />
+        <Bell size={14} />
       </button>
 
       {/* Wallet button (desktop) */}

@@ -7,7 +7,45 @@ export type Collection = {
   volume24h: number;
   owners: number;
   supply: number;
+  imageUrl?: string;
 };
+
+/**
+ * Live-fetch OpenSea stats + metadata for a single slug. Returns a
+ * merged Collection where any field OpenSea returned overrides the
+ * fallback. Used by Markets, Drops, and TokenDetail so they all share
+ * one source of live truth.
+ */
+export async function fetchOpenSeaCollection(
+  fallback: Collection,
+): Promise<Collection> {
+  const slug = fallback.slug;
+  const headers = { Accept: 'application/json' };
+  const safe = async (url: string) => {
+    try {
+      const r = await fetch(url, { headers });
+      if (!r.ok) return null;
+      return await r.json();
+    } catch { return null; }
+  };
+
+  const [stats, meta] = await Promise.all([
+    safe(`https://api.opensea.io/api/v2/collections/${slug}/stats`),
+    safe(`https://api.opensea.io/api/v2/collections/${slug}`),
+  ]);
+
+  const oneDay = stats?.intervals?.find((i: any) => i.interval === 'one_day');
+  return {
+    ...fallback,
+    floor:     Number(stats?.total?.floor_price) || fallback.floor,
+    volume24h: Number(oneDay?.volume) || fallback.volume24h,
+    change24h: Number(oneDay?.volume_change) || fallback.change24h,
+    owners:    Number(stats?.total?.num_owners) || fallback.owners,
+    supply:    Number(meta?.total_supply) || fallback.supply,
+    name:      meta?.name || fallback.name,
+    imageUrl:  meta?.image_url || fallback.imageUrl,
+  };
+}
 
 export const COLLECTIONS: Collection[] = [
   { slug: 'cryptopunks',         ticker: 'PUNKS',  name: 'CryptoPunks',     floor: 42.5,  change24h:  6.8, volume24h: 1280, owners: 3700, supply: 10000 },

@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Sprout, Search as SearchIcon, X } from 'lucide-react';
-import { COLLECTIONS, type Collection } from '../data';
+import { COLLECTIONS, fetchOpenSeaCollection, type Collection } from '../data';
 import Spark, { sparkline } from './Spark';
 import TokenDetail from './TokenDetail';
+import Thumb from './Thumb';
 
 const ETH_USD = 3000;
 
@@ -27,21 +28,38 @@ function fakeAge(slug: string) {
 export default function Markets() {
   const [search, setSearch] = useState('');
   const [open, setOpen] = useState<Collection | null>(null);
+  const [live, setLive] = useState<Record<string, Collection>>({});
+
+  // Pull live floor/volume/image for every collection on mount.
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all(COLLECTIONS.map(fetchOpenSeaCollection)).then(rows => {
+      if (cancelled) return;
+      const map: Record<string, Collection> = {};
+      rows.forEach(r => { map[r.slug] = r; });
+      setLive(map);
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const merged = useMemo(
+    () => COLLECTIONS.map(c => live[c.slug] ?? c),
+    [live],
+  );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const base = q
-      ? COLLECTIONS.filter(c =>
+      ? merged.filter(c =>
           c.ticker.toLowerCase().includes(q) ||
           c.name.toLowerCase().includes(q) ||
           c.slug.toLowerCase().includes(q))
-      : COLLECTIONS;
+      : merged;
     return [...base].sort((a, b) => b.volume24h - a.volume24h);
-  }, [search]);
+  }, [merged, search]);
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '12px 12px 120px' }}>
-      {/* Search */}
       <div style={{ position: 'relative', marginBottom: 8 }}>
         <SearchIcon
           size={16}
@@ -95,7 +113,6 @@ export default function Markets() {
         )}
       </div>
 
-      {/* List */}
       <div>
         {filtered.length === 0 && (
           <div style={{ padding: '48px 0', textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontSize: 14 }}>
@@ -113,8 +130,6 @@ export default function Markets() {
 function Row({ c, onTap }: { c: Collection; onTap: () => void }) {
   const up = c.change24h >= 0;
   const spark = sparkline(c.floor, c.change24h, 26);
-  const hueA = (c.ticker.charCodeAt(0) * 23) % 360;
-  const hueB = (c.ticker.charCodeAt(1) * 41) % 360;
   const mcUsd = c.floor * c.supply * ETH_USD;
 
   return (
@@ -134,44 +149,8 @@ function Row({ c, onTap }: { c: Collection; onTap: () => void }) {
         textAlign: 'left',
       }}
     >
-      {/* Thumbnail */}
-      <div
-        style={{
-          width: 56,
-          height: 56,
-          borderRadius: 16,
-          background: `linear-gradient(135deg, hsl(${hueA} 70% 45%), hsl(${hueB} 70% 55%))`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        <span
-          aria-hidden
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background: 'radial-gradient(circle at 25% 25%, rgba(255,255,255,0.25) 0%, transparent 45%)',
-          }}
-        />
-        <span
-          style={{
-            position: 'relative',
-            color: '#fff',
-            fontWeight: 900,
-            fontSize: 18,
-            letterSpacing: '-0.02em',
-            textShadow: '0 2px 6px rgba(0,0,0,0.55)',
-          }}
-        >
-          {c.ticker.slice(0, 2)}
-        </span>
-      </div>
+      <Thumb collection={c} />
 
-      {/* Name + ticker + age */}
       <div style={{ minWidth: 0 }}>
         <div
           style={{
@@ -197,10 +176,8 @@ function Row({ c, onTap }: { c: Collection; onTap: () => void }) {
         </div>
       </div>
 
-      {/* Sparkline */}
       <Spark data={spark} up={up} width={80} height={36} />
 
-      {/* Floor + MC */}
       <div style={{ textAlign: 'right', minWidth: 0 }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>
           {c.floor.toFixed(2)} <span style={{ fontSize: 13, opacity: 0.85 }}>Ξ</span>
