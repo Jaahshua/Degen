@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { type Collection, generateCandles } from '../data';
 import Candle from './Candle';
+import { useWalletGate } from '../hooks/useWalletGate';
+import { toast } from './Toast';
 
 const ETH_USD = 3000;
 const TF = ['1m', '5m', '15m', '1h', '4h', '1d', 'All'] as const;
@@ -38,6 +40,15 @@ function fakeAge(slug: string) {
   return `${days}d`;
 }
 
+const STAR_KEY = 'degensea-stars';
+
+function readStars(): string[] {
+  try { return JSON.parse(localStorage.getItem(STAR_KEY) || '[]'); } catch { return []; }
+}
+function writeStars(s: string[]) {
+  try { localStorage.setItem(STAR_KEY, JSON.stringify(s)); } catch {}
+}
+
 export default function TokenDetail({ c, onClose }: { c: Collection; onClose: () => void }) {
   const [tf, setTf] = useState<Timeframe>('1m');
   const [denom, setDenom] = useState<'usd' | 'eth'>('usd');
@@ -45,6 +56,35 @@ export default function TokenDetail({ c, onClose }: { c: Collection; onClose: ()
   const [starred, setStarred] = useState(false);
   const [copied, setCopied] = useState(false);
   const [chartWidth, setChartWidth] = useState(360);
+  const [buyAmt, setBuyAmt] = useState('0.05');
+  const gate = useWalletGate();
+
+  // Star persistence
+  useEffect(() => {
+    setStarred(readStars().includes(c.slug));
+  }, [c.slug]);
+  const toggleStar = () => {
+    const stars = readStars();
+    const next = stars.includes(c.slug) ? stars.filter(s => s !== c.slug) : [...stars, c.slug];
+    writeStars(next);
+    setStarred(next.includes(c.slug));
+    toast(next.includes(c.slug) ? `★ Watching ${c.ticker}` : `Removed ${c.ticker}`);
+  };
+
+  const handleBuy = (ethAmt: string) =>
+    gate(() => toast(`Bought ${ethAmt} Ξ of ${c.ticker}`));
+
+  const handleShare = async () => {
+    const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/?t=${c.slug}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `$${c.ticker}`, text: c.name, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast('Link copied');
+      }
+    } catch { /* user cancelled */ }
+  };
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -189,11 +229,13 @@ export default function TokenDetail({ c, onClose }: { c: Collection; onClose: ()
             </button>
           </div>
 
-          <IconBtn label="Share"><Share2 size={18} /></IconBtn>
-          <IconBtn label="Watch" onClick={() => setStarred(s => !s)}>
+          <IconBtn label="Share" onClick={handleShare}><Share2 size={18} /></IconBtn>
+          <IconBtn label="Watch" onClick={toggleStar}>
             <Star size={18} fill={starred ? '#fbbf24' : 'none'} color={starred ? '#fbbf24' : undefined} />
           </IconBtn>
-          <IconBtn label="Notify"><Bell size={18} /></IconBtn>
+          <IconBtn label="Notify" onClick={() => toast(`Alerts on for ${c.ticker}`)}>
+            <Bell size={18} />
+          </IconBtn>
         </div>
 
         {/* HEADLINE */}
@@ -338,28 +380,36 @@ export default function TokenDetail({ c, onClose }: { c: Collection; onClose: ()
 
         {/* SCROLL BODY */}
         <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 96 }}>
-          {/* Quick buy chips */}
+          {/* Quick buy chips — tap once to select, twice to buy */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, padding: '12px 12px' }}>
-            {['0.05', '0.1', '0.2'].map(amt => (
-              <button
-                key={amt}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                  padding: '10px 0',
-                  borderRadius: 999,
-                  background: 'rgba(16, 88, 50, 0.4)',
-                  border: '1px solid rgba(34, 197, 94, 0.4)',
-                  color: 'var(--up)',
-                  fontSize: 16,
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  fontFamily: 'var(--font-mono), monospace',
-                }}
-              >
-                {amt}
-                <EthGlyph />
-              </button>
-            ))}
+            {['0.05', '0.1', '0.2'].map(amt => {
+              const selected = buyAmt === amt;
+              return (
+                <button
+                  key={amt}
+                  onClick={() => {
+                    if (selected) handleBuy(amt);
+                    else setBuyAmt(amt);
+                  }}
+                  style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    padding: '10px 0',
+                    borderRadius: 999,
+                    background: selected ? 'rgba(34, 197, 94, 0.5)' : 'rgba(16, 88, 50, 0.4)',
+                    border: selected ? '2px solid var(--up)' : '1px solid rgba(34, 197, 94, 0.4)',
+                    color: selected ? '#fff' : 'var(--up)',
+                    fontSize: 16,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-mono), monospace',
+                    transition: 'all 120ms ease',
+                  }}
+                >
+                  {amt}
+                  <EthGlyph />
+                </button>
+              );
+            })}
           </div>
 
           {/* Wallet utility row */}
@@ -433,8 +483,9 @@ export default function TokenDetail({ c, onClose }: { c: Collection; onClose: ()
           <button
             className="btn-blood"
             style={{ width: '100%', padding: '14px 0', fontSize: 15 }}
+            onClick={() => handleBuy(buyAmt)}
           >
-            <span>Buy {c.ticker} · {floor.toFixed(2)} Ξ</span>
+            <span>Buy {c.ticker} · {buyAmt} Ξ</span>
           </button>
         </div>
       </div>

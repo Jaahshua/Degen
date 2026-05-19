@@ -7,6 +7,7 @@ import Drops from './components/Drops';
 import Launchpad from './components/Launchpad';
 import BottomNav from './components/BottomNav';
 import LoadingScreen from './components/LoadingScreen';
+import Toast from './components/Toast';
 
 export type View = 'markets' | 'drops' | 'launchpad';
 
@@ -39,6 +40,7 @@ export default function DegenSea() {
       </main>
 
       <BottomNav view={view} onView={setView} />
+      <Toast />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { Send, Bell } from 'lucide-react';
 import Logo from './Logo';
+import { toast } from './Toast';
 
 export default function TopBar() {
   return (
@@ -11,7 +12,7 @@ export default function TopBar() {
         position: 'sticky',
         top: 0,
         zIndex: 50,
-        height: 56,
+        height: 88,
         background: '#000',
         borderBottom: '1px solid rgba(255,255,255,0.05)',
         display: 'flex',
@@ -45,13 +46,14 @@ export default function TopBar() {
         }}
         aria-label="DEGENSEA"
       >
-        <Logo height={28} />
+        <Logo height={72} />
       </a>
 
       <div style={{ flex: 1 }} />
 
       <button
         aria-label="Activity"
+        onClick={() => toast('Activity feed coming soon')}
         style={{
           position: 'relative',
           width: 36,
@@ -70,6 +72,7 @@ export default function TopBar() {
 
       <button
         aria-label="Notifications"
+        onClick={() => toast('No new alerts')}
         style={{
           position: 'relative',
           width: 36,

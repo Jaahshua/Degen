@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ArrowUp, Sprout, Search as SearchIcon, X } from 'lucide-react';
+import { Sprout, Search as SearchIcon, X } from 'lucide-react';
 import { COLLECTIONS, type Collection } from '../data';
 import Spark, { sparkline } from './Spark';
 import TokenDetail from './TokenDetail';
@@ -38,8 +38,6 @@ export default function Markets() {
       : COLLECTIONS;
     return [...base].sort((a, b) => b.volume24h - a.volume24h);
   }, [search]);
-
-  const movers = filtered.filter(c => c.change24h > 5).length;
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '12px 12px 120px' }}>
@@ -96,29 +94,6 @@ export default function Markets() {
           </button>
         )}
       </div>
-
-      {/* "N new movers" pill */}
-      <button
-        style={{
-          width: '100%',
-          padding: '10px 16px',
-          marginTop: 4,
-          marginBottom: 8,
-          borderRadius: 16,
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          color: 'var(--up)',
-          fontSize: 14,
-          fontWeight: 700,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 8,
-          cursor: 'pointer',
-        }}
-      >
-        <ArrowUp size={14} /> {movers} new mover{movers === 1 ? '' : 's'}
-      </button>
 
       {/* List */}
       <div>

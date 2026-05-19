@@ -212,6 +212,88 @@ export function generateCandles(slug: string, basePrice: number, count = 60): Ca
   return out;
 }
 
+/* ============================================================
+   RECENT TRENDING — curated slugs of (relatively) recent NFT
+   collections that historically post strong OpenSea volume.
+   Fetched live from the public v2 /stats endpoint at runtime.
+   ============================================================ */
+
+export type RecentBase = {
+  slug: string;
+  name: string;
+  ticker: string;
+  supply: number;
+  mintedDaysAgo: number;
+};
+
+export const RECENT_TRENDING: RecentBase[] = [
+  { slug: 'pudgypenguins',          name: 'Pudgy Penguins',     ticker: 'PUDGY',  supply:  8888, mintedDaysAgo:  920 },
+  { slug: 'milady',                 name: 'Milady Maker',       ticker: 'MILADY', supply: 10000, mintedDaysAgo: 1180 },
+  { slug: 'memeland-captainz',      name: 'The Captainz',       ticker: 'CPTNZ',  supply:  9999, mintedDaysAgo:  700 },
+  { slug: 'mocaverse',              name: 'Mocaverse',          ticker: 'MOCA',   supply:  8888, mintedDaysAgo:  540 },
+  { slug: 'nakamigos',              name: 'Nakamigos',          ticker: 'NKMG',   supply: 20000, mintedDaysAgo:  800 },
+  { slug: 'renga',                  name: 'RENGA',              ticker: 'RENGA',  supply: 10000, mintedDaysAgo:  680 },
+  { slug: 'lilpudgys',              name: 'Lil Pudgys',         ticker: 'LILP',   supply: 22222, mintedDaysAgo:  780 },
+  { slug: 'redacted-remilio-babies',name: 'Remilio Babies',     ticker: 'REMIL',  supply: 10000, mintedDaysAgo: 760 },
+  { slug: 'pixelmon-trainer',       name: 'Pixelmon Trainers',  ticker: 'PIXEL',  supply: 10005, mintedDaysAgo: 1010 },
+  { slug: 'azuki-elementals',       name: 'Azuki Elementals',   ticker: 'ELEM',   supply: 20000, mintedDaysAgo:  700 },
+  { slug: 'memeland-potatoz',       name: 'The Potatoz',        ticker: 'POTZ',   supply:  9999, mintedDaysAgo: 1050 },
+  { slug: 'degods',                 name: 'DeGods',             ticker: 'DEGOD',  supply: 10000, mintedDaysAgo:  900 },
+];
+
+export type Trending = RecentBase & {
+  floor: number;
+  volume24h: number;
+  change24h: number;
+  owners: number;
+  imageUrl?: string;
+  live: boolean; // true if data came from the network
+};
+
+async function fetchJson(url: string): Promise<any | null> {
+  try {
+    const r = await fetch(url, { headers: { Accept: 'application/json' } });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchTrendingCollection(base: RecentBase): Promise<Trending> {
+  const [stats, meta] = await Promise.all([
+    fetchJson(`https://api.opensea.io/api/v2/collections/${base.slug}/stats`),
+    fetchJson(`https://api.opensea.io/api/v2/collections/${base.slug}`),
+  ]);
+
+  const oneDay = stats?.intervals?.find((i: any) => i.interval === 'one_day');
+  const floor = Number(stats?.total?.floor_price) || mockFloor(base.slug);
+  const vol   = Number(oneDay?.volume)             || mockVol(base.slug);
+  const change = Number(oneDay?.volume_change)     || (((base.slug.charCodeAt(0) * 13) % 80) - 30);
+  const owners = Number(stats?.total?.num_owners)  || Math.round(base.supply * 0.55);
+
+  return {
+    ...base,
+    floor,
+    volume24h: vol,
+    change24h: change,
+    owners,
+    imageUrl: meta?.image_url,
+    live: !!stats,
+  };
+}
+
+function mockFloor(slug: string) {
+  let s = 0;
+  for (let i = 0; i < slug.length; i++) s = (s * 31 + slug.charCodeAt(i)) | 0;
+  return Math.max(0.05, Math.abs(s % 800) / 100); // 0.05–8 Ξ
+}
+function mockVol(slug: string) {
+  let s = 0;
+  for (let i = 0; i < slug.length; i++) s = (s * 17 + slug.charCodeAt(i)) | 0;
+  return Math.max(20, Math.abs(s % 2400));
+}
+
 export const formatAgeSec = (s: number) => {
   if (s < 60) return `${s}s`;
   if (s < 3600) return `${Math.floor(s / 60)}m`;

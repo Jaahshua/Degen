@@ -1,161 +1,279 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { DROPS, formatCountdown, type Drop } from '../data';
-import { Flame, Clock, Users, Bell, ArrowUpRight } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Sprout } from 'lucide-react';
+import {
+  RECENT_TRENDING, fetchTrendingCollection, type Trending,
+  type Collection,
+} from '../data';
+import Spark, { sparkline } from './Spark';
+import TokenDetail from './TokenDetail';
+
+const ETH_USD = 3000;
+
+function fmtUsd(n: number) {
+  if (n >= 1_000_000_000) return `$${(n / 1e9).toFixed(2)}B`;
+  if (n >= 1_000_000)     return `$${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1_000)         return `$${(n / 1e3).toFixed(1)}K`;
+  return `$${n.toFixed(0)}`;
+}
+
+function fmtAge(days: number) {
+  if (days >= 365) return `${(days / 365).toFixed(days >= 730 ? 0 : 1)}y`;
+  if (days >= 30)  return `${Math.floor(days / 30)}mo`;
+  return `${days}d`;
+}
 
 export default function Drops() {
-  const [, force] = useState(0);
+  const [items, setItems] = useState<Trending[] | null>(null);
+  const [open, setOpen] = useState<Collection | null>(null);
+
   useEffect(() => {
-    const t = setInterval(() => force(x => x + 1), 1000);
-    return () => clearInterval(t);
+    let cancelled = false;
+    Promise.all(RECENT_TRENDING.map(fetchTrendingCollection))
+      .then(rows => {
+        if (cancelled) return;
+        const sorted = [...rows].sort((a, b) => b.volume24h - a.volume24h);
+        setItems(sorted);
+      })
+      .catch(() => { if (!cancelled) setItems([]); });
+    return () => { cancelled = true; };
   }, []);
 
-  const baseTime = Math.floor(Date.now() / 1000) - 5; // pretend session start
-  const now = Math.floor(Date.now() / 1000);
+  const liveCount = useMemo(() => items?.filter(i => i.live).length ?? 0, [items]);
 
   return (
     <div style={{ maxWidth: 720, margin: '0 auto', padding: '12px 12px 120px' }}>
-      <h1
-        style={{
-          margin: '8px 0 16px',
-          fontSize: 26,
-          fontWeight: 900,
-          letterSpacing: '-0.03em',
-        }}
-      >
-        <span className="text-sunset">Sunset</span> Drops
-      </h1>
-
-      <div style={{ display: 'grid', gap: 12 }}>
-        {DROPS.map(d => <Card key={d.id} d={d} remaining={Math.max(0, baseTime + d.liveInSeconds - now)} />)}
+      <div style={{ marginBottom: 12 }}>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: 26,
+            fontWeight: 900,
+            letterSpacing: '-0.03em',
+          }}
+        >
+          <span className="text-sunset">Recent</span> Drops
+        </h1>
+        <div
+          style={{
+            marginTop: 4,
+            fontSize: 11,
+            color: 'rgba(255,255,255,0.5)',
+            fontFamily: 'var(--font-mono), monospace',
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          New collections in top OpenSea volume
+          {items && (
+            <>
+              <span style={{ opacity: 0.4 }}>·</span>
+              <span style={{ color: liveCount > 0 ? 'var(--up)' : 'rgba(255,255,255,0.4)' }}>
+                {liveCount > 0 ? `${liveCount} LIVE` : 'CACHED'}
+              </span>
+            </>
+          )}
+        </div>
       </div>
+
+      {!items && <Skeleton />}
+
+      {items && items.length === 0 && (
+        <div style={{ padding: '48px 0', textAlign: 'center', color: 'rgba(255,255,255,0.4)' }}>
+          OpenSea didn't return data right now. Try refreshing in a minute.
+        </div>
+      )}
+
+      {items && items.length > 0 && (
+        <div>
+          {items.map(item => (
+            <Row
+              key={item.slug}
+              item={item}
+              onTap={() =>
+                setOpen({
+                  slug: item.slug,
+                  ticker: item.ticker,
+                  name: item.name,
+                  floor: item.floor,
+                  change24h: item.change24h,
+                  volume24h: item.volume24h,
+                  owners: item.owners,
+                  supply: item.supply,
+                })
+              }
+            />
+          ))}
+        </div>
+      )}
+
+      {open && <TokenDetail c={open} onClose={() => setOpen(null)} />}
     </div>
   );
 }
 
-function Card({ d, remaining }: { d: Drop; remaining: number }) {
+function Row({ item, onTap }: { item: Trending; onTap: () => void }) {
+  const up = item.change24h >= 0;
+  const spark = sparkline(item.floor, item.change24h, 26);
+  const mcUsd = item.floor * item.supply * ETH_USD;
+  const hueA = (item.ticker.charCodeAt(0) * 23) % 360;
+  const hueB = (item.ticker.charCodeAt(1) * 41) % 360;
+
+  return (
+    <button
+      onClick={onTap}
+      style={{
+        width: '100%',
+        display: 'grid',
+        gridTemplateColumns: '56px 1fr 80px 80px',
+        gap: 12,
+        alignItems: 'center',
+        padding: '12px 0',
+        background: 'transparent',
+        border: 'none',
+        borderBottom: '1px solid rgba(255,255,255,0.05)',
+        cursor: 'pointer',
+        textAlign: 'left',
+      }}
+    >
+      <Thumb item={item} hueA={hueA} hueB={hueB} />
+
+      <div style={{ minWidth: 0 }}>
+        <div
+          style={{
+            fontSize: 16,
+            fontWeight: 600,
+            color: '#fff',
+            lineHeight: 1.2,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {item.name}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, fontSize: 12 }}>
+          <span style={{ color: 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-mono), monospace' }}>
+            {item.ticker}
+          </span>
+          <Sprout size={10} style={{ color: 'rgba(34,197,94,0.8)' }} />
+          <span style={{ color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-mono), monospace' }}>
+            {fmtAge(item.mintedDaysAgo)}
+          </span>
+        </div>
+      </div>
+
+      <Spark data={spark} up={up} width={80} height={36} />
+
+      <div style={{ textAlign: 'right', minWidth: 0 }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', lineHeight: 1.2 }}>
+          {item.floor.toFixed(2)} <span style={{ fontSize: 13, opacity: 0.85 }}>Ξ</span>
+        </div>
+        <div
+          style={{
+            fontSize: 10,
+            color: 'rgba(255,255,255,0.4)',
+            fontFamily: 'var(--font-mono), monospace',
+            marginTop: 2,
+          }}
+        >
+          {fmtUsd(mcUsd)}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function Thumb({ item, hueA, hueB }: { item: Trending; hueA: number; hueB: number }) {
+  const [errored, setErrored] = useState(false);
+  if (item.imageUrl && !errored) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={item.imageUrl}
+        alt={item.name}
+        onError={() => setErrored(true)}
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: 16,
+          objectFit: 'cover',
+          flexShrink: 0,
+          display: 'block',
+        }}
+      />
+    );
+  }
   return (
     <div
       style={{
+        width: 56,
+        height: 56,
+        borderRadius: 16,
+        background: `linear-gradient(135deg, hsl(${hueA} 70% 45%), hsl(${hueB} 70% 55%))`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexShrink: 0,
         position: 'relative',
-        borderRadius: 20,
         overflow: 'hidden',
-        padding: 12,
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.08)',
       }}
     >
-      <div
+      <span
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'radial-gradient(circle at 25% 25%, rgba(255,255,255,0.25) 0%, transparent 45%)',
+        }}
+      />
+      <span
         style={{
           position: 'relative',
-          aspectRatio: '16 / 9',
-          borderRadius: 14,
-          overflow: 'hidden',
-          background: `linear-gradient(135deg, ${d.hue1} 0%, ${d.hue2} 50%, ${d.hue3} 100%)`,
-          display: 'flex',
-          alignItems: 'flex-end',
-          padding: 12,
+          color: '#fff',
+          fontWeight: 900,
+          fontSize: 18,
+          letterSpacing: '-0.02em',
+          textShadow: '0 2px 6px rgba(0,0,0,0.55)',
         }}
       >
-        <span
-          aria-hidden
-          style={{
-            position: 'absolute',
-            inset: 0,
-            background:
-              'radial-gradient(circle at 25% 20%, rgba(255,255,255,0.22) 0%, transparent 50%), radial-gradient(circle at 80% 90%, rgba(0,0,0,0.28) 0%, transparent 50%)',
-          }}
-        />
-        <span
-          style={{
-            position: 'absolute',
-            right: -8,
-            bottom: -10,
-            fontSize: 100,
-            fontWeight: 900,
-            color: 'rgba(255,255,255,0.15)',
-            letterSpacing: '-0.05em',
-            lineHeight: 1,
-          }}
-        >
-          {d.ticker.slice(0, 5)}
-        </span>
-        {d.hot && (
-          <span
-            style={{
-              position: 'absolute', top: 10, left: 10,
-              display: 'inline-flex', alignItems: 'center', gap: 4,
-              padding: '3px 8px', borderRadius: 999,
-              background: 'rgba(0,0,0,0.45)',
-              backdropFilter: 'blur(4px)',
-              fontSize: 10, fontWeight: 700, color: 'var(--pink)',
-              textTransform: 'uppercase', letterSpacing: '0.1em',
-            }}
-          >
-            <Flame size={10}/> Hot
-          </span>
-        )}
-        <div style={{ position: 'relative', color: '#fff', fontWeight: 900, fontSize: 22, letterSpacing: '-0.02em' }}>
-          ${d.ticker}
-        </div>
-      </div>
+        {item.ticker.slice(0, 2)}
+      </span>
+    </div>
+  );
+}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: 12, gap: 12 }}>
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {d.name}
-          </div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>by {d.artist}</div>
-        </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 14, fontWeight: 700, fontFamily: 'var(--font-mono), monospace' }}>
-            {d.priceEth} Ξ
-          </div>
-          <div
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 3,
-              fontSize: 11, color: 'rgba(255,255,255,0.5)',
-              fontFamily: 'var(--font-mono), monospace',
-              marginTop: 2,
-            }}
-          >
-            <Users size={10}/>{d.supply.toLocaleString()}
-          </div>
-        </div>
-      </div>
-
-      <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+function Skeleton() {
+  return (
+    <div>
+      {Array.from({ length: 6 }).map((_, i) => (
         <div
+          key={i}
           style={{
-            display: 'inline-flex', alignItems: 'center', gap: 4,
-            fontSize: 12, fontFamily: 'var(--font-mono), monospace',
+            display: 'grid',
+            gridTemplateColumns: '56px 1fr 80px 80px',
+            gap: 12,
+            padding: '12px 0',
+            borderBottom: '1px solid rgba(255,255,255,0.05)',
+            alignItems: 'center',
           }}
-          className="text-sunset"
         >
-          <Clock size={12}/>
-          {remaining === 0 ? 'LIVE' : formatCountdown(remaining)}
+          <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(255,255,255,0.04)' }} />
+          <div>
+            <div style={{ height: 14, width: '60%', borderRadius: 4, background: 'rgba(255,255,255,0.05)' }} />
+            <div style={{ marginTop: 8, height: 10, width: '40%', borderRadius: 4, background: 'rgba(255,255,255,0.04)' }} />
+          </div>
+          <div style={{ height: 24, background: 'rgba(255,255,255,0.04)', borderRadius: 4 }} />
+          <div>
+            <div style={{ height: 14, width: '80%', marginLeft: 'auto', borderRadius: 4, background: 'rgba(255,255,255,0.05)' }} />
+            <div style={{ marginTop: 6, height: 10, width: '60%', marginLeft: 'auto', borderRadius: 4, background: 'rgba(255,255,255,0.04)' }} />
+          </div>
         </div>
-        {remaining === 0 ? (
-          <button className="btn-blood" style={{ padding: '6px 14px', fontSize: 11 }}>
-            <span>Mint</span> <ArrowUpRight size={11}/>
-          </button>
-        ) : (
-          <button
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: 4,
-              padding: '6px 12px', borderRadius: 999,
-              background: 'rgba(255,255,255,0.06)',
-              color: 'rgba(255,255,255,0.85)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
-              cursor: 'pointer',
-            }}
-          >
-            Remind <Bell size={11}/>
-          </button>
-        )}
-      </div>
+      ))}
     </div>
   );
 }

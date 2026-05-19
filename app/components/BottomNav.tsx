@@ -1,7 +1,8 @@
 'use client';
 
 import { LineChart, Flame, Search, Rocket, User } from 'lucide-react';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { ConnectButton, useAccountModal, useConnectModal } from '@rainbow-me/rainbowkit';
+import { useAccount } from 'wagmi';
 import type { View } from '../page';
 
 export default function BottomNav({
@@ -10,6 +11,24 @@ export default function BottomNav({
   view: View;
   onView: (v: View) => void;
 }) {
+  const { isConnected } = useAccount();
+  const { openConnectModal } = useConnectModal();
+  const { openAccountModal } = useAccountModal();
+
+  const onSearch = () => {
+    if (view !== 'markets') onView('markets');
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const el = document.querySelector('input[placeholder^="Search"]') as HTMLInputElement | null;
+      el?.focus({ preventScroll: true });
+    }, 50);
+  };
+
+  const onAccount = () => {
+    if (isConnected) openAccountModal?.();
+    else openConnectModal?.();
+  };
+
   return (
     <div
       className="md:hidden"
@@ -47,12 +66,12 @@ export default function BottomNav({
         </div>
 
         <ConnectButton.Custom>
-          {({ account, openConnectModal, openAccountModal, mounted }) => {
+          {({ account, openConnectModal: ocm, openAccountModal: oam, mounted }) => {
             if (!mounted) return <div style={{ width: 96, height: 32, borderRadius: 999, background: 'rgba(255,255,255,0.05)' }} />;
             if (!account) {
               return (
                 <button
-                  onClick={openConnectModal}
+                  onClick={ocm}
                   className="btn-blood"
                   style={{ padding: '6px 16px', fontSize: 13 }}
                 >
@@ -62,7 +81,7 @@ export default function BottomNav({
             }
             return (
               <button
-                onClick={openAccountModal}
+                onClick={oam}
                 style={{
                   padding: '6px 16px',
                   borderRadius: 999,
@@ -97,8 +116,8 @@ export default function BottomNav({
         <Tab icon={<LineChart size={20}/>} label="Markets" active={view === 'markets'} onClick={() => onView('markets')} />
         <Tab icon={<Flame size={20}/>}     label="Drops"   active={view === 'drops'}    onClick={() => onView('drops')} />
         <CenterTab active={view === 'launchpad'} onClick={() => onView('launchpad')} />
-        <Tab icon={<Search size={20}/>}    label="Search"  onClick={() => {}} />
-        <Tab icon={<User size={20}/>}      label="Account" onClick={() => {}} />
+        <Tab icon={<Search size={20}/>}    label="Search"  onClick={onSearch} />
+        <Tab icon={<User size={20}/>}      label="Account" onClick={onAccount} />
       </nav>
     </div>
   );
