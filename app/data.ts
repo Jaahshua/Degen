@@ -280,6 +280,9 @@ export const COLLECTIONS: Collection[] = [
   { slug: 'mfers',               ticker: 'MFER',   name: 'mfers',           floor:  0.9,  change24h: -3.2, volume24h:   95, owners: 5800, supply: 10021 },
   { slug: 'lilpudgys',           ticker: 'LILP',   name: 'Lil Pudgys',      floor:  0.7,  change24h:  8.4, volume24h:  150, owners: 7100, supply: 22222 },
   { slug: 'remilio-babies',      ticker: 'REMIL',  name: 'Remilio Babies',  floor:  1.8,  change24h: 22.1, volume24h:  210, owners: 3200, supply:  10000 },
+  { slug: 'quirkies',            ticker: 'QUIRK',  name: 'Quirkies',        floor:  0.04, change24h:  3.5, volume24h:   18, owners: 2800, supply:  5000  },
+  { slug: 'quirklings',          ticker: 'QRKL',   name: 'Quirklings',      floor:  0.02, change24h: -1.2, volume24h:    9, owners: 3100, supply:  7777  },
+  { slug: 'inx-token',           ticker: 'INX',    name: 'INX',             floor:  0.03, change24h:  5.0, volume24h:   12, owners: 1900, supply:  10000 },
 ];
 
 export type Drop = {

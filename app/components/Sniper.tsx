@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import {
   Crosshair, Plus, X, Pause, Trash2, Search as SearchIcon, Zap,
-  Wallet as WalletIcon, ShieldCheck,
+  Wallet as WalletIcon, ShieldCheck, Info, Target, MousePointerClick, BellRing,
 } from 'lucide-react';
 import {
   readSnipers, writeSnipers, type Sniper as SniperT,
@@ -16,6 +16,7 @@ import { toast } from './Toast';
 export default function SniperView() {
   const [snipers, setSnipers] = useState<SniperT[]>([]);
   const [editing, setEditing] = useState<Partial<SniperT> | null>(null);
+  const [infoOpen, setInfoOpen] = useState(false);
   const gate = useWalletGate();
 
   // Hydrate from localStorage
@@ -83,8 +84,23 @@ export default function SniperView() {
           marginBottom: 14,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'rgba(220,38,38,0.85)', fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', fontFamily: 'var(--font-mono), monospace' }}>
-          <Crosshair size={12} /> Sniper Bot
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'rgba(220,38,38,0.85)', fontSize: 10, letterSpacing: '0.22em', textTransform: 'uppercase', fontFamily: 'var(--font-mono), monospace' }}>
+            <Crosshair size={12} /> Sniper Bot
+          </div>
+          <button
+            onClick={() => setInfoOpen(true)}
+            aria-label="How it works"
+            style={{
+              width: 24, height: 24, borderRadius: 999,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              color: 'rgba(255,255,255,0.75)', cursor: 'pointer', padding: 0,
+            }}
+          >
+            <Info size={13} />
+          </button>
         </div>
         <h1 style={{ margin: '8px 0 6px', fontSize: 24, fontWeight: 900, letterSpacing: '-0.03em', lineHeight: 1.1 }}>
           Auto-mint &amp; snipe <span className="text-sunset">floors</span>
@@ -139,6 +155,105 @@ export default function SniperView() {
           onSave={save}
         />
       )}
+
+      {infoOpen && <SniperInfo onClose={() => setInfoOpen(false)} />}
+    </div>
+  );
+}
+
+function SniperInfo({ onClose }: { onClose: () => void }) {
+  const steps = [
+    { icon: <Target size={16} />,             title: 'Pick a target', body: 'Choose any collection — from the list or by searching OpenSea.' },
+    { icon: <MousePointerClick size={16} />,  title: 'Set the rule',   body: 'Fire when the mint goes live, or when the floor drops to a price you choose.' },
+    { icon: <Zap size={16} />,                title: 'Set your cap',   body: 'Max price per item, how many to grab, and how fast (gas).' },
+    { icon: <BellRing size={16} />,           title: 'It watches',     body: 'The bot watches OpenSea + the mempool 24/7. The moment your rule hits, it prepares the buy.' },
+    { icon: <ShieldCheck size={16} />,        title: 'You approve',    body: 'Your wallet signs the final buy — nothing spends without your tap. Pause or delete a sniper any time.' },
+  ];
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 95,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'rgba(0,0,0,0.78)', backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)', padding: 16,
+      }}
+      onClick={onClose}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        className="fade-in"
+        style={{
+          width: '100%', maxWidth: 400,
+          background: '#0a0512',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 18, padding: 18,
+          maxHeight: '86vh', overflowY: 'auto',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Crosshair size={18} className="text-sunset" />
+            <span style={{ fontSize: 17, fontWeight: 900, letterSpacing: '-0.02em' }}>How sniping works</span>
+          </div>
+          <button onClick={onClose} aria-label="Close" style={{ ...iconBtnStyle, width: 30, height: 30 }}>
+            <X size={15} />
+          </button>
+        </div>
+
+        <p style={{ margin: '0 0 16px', fontSize: 13, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
+          A sniper is a saved buy order that triggers itself. Set it once and it
+          grabs the NFT the instant your conditions are met — so you don&apos;t have
+          to sit there refreshing.
+        </p>
+
+        <div style={{ display: 'grid', gap: 12 }}>
+          {steps.map((s, i) => (
+            <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+              <div
+                style={{
+                  width: 34, height: 34, borderRadius: 10, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'rgba(220,38,38,0.15)',
+                  border: '1px solid rgba(220,38,38,0.3)',
+                  color: '#fbbf24',
+                }}
+              >
+                {s.icon}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#fff' }}>
+                  <span style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono), monospace', marginRight: 6 }}>{i + 1}</span>
+                  {s.title}
+                </div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.6)', lineHeight: 1.5, marginTop: 2 }}>
+                  {s.body}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div
+          style={{
+            marginTop: 16, padding: '10px 12px', borderRadius: 12,
+            background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)',
+            fontSize: 11, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5,
+            display: 'flex', gap: 8, alignItems: 'flex-start',
+          }}
+        >
+          <ShieldCheck size={14} style={{ color: 'var(--up)', flexShrink: 0, marginTop: 1 }} />
+          <span>Your keys stay in your wallet. The bot can never move funds without your signature.</span>
+        </div>
+
+        <button
+          className="btn-blood"
+          style={{ width: '100%', marginTop: 16, padding: '12px 0', fontSize: 14 }}
+          onClick={onClose}
+        >
+          <span>Got it</span>
+        </button>
+      </div>
     </div>
   );
 }

@@ -39,6 +39,45 @@ function riskScore(wallets: Wallet[], supply: number): { score: number; label: s
   return                  { score, label: 'CRITICAL',     color: '#ef4444' };
 }
 
+type Level = 'danger' | 'warn' | 'good';
+type Signal = { level: Level; text: string };
+const LEVEL_COLOR: Record<Level, string> = { danger: '#ef4444', warn: '#fbbf24', good: '#22c55e' };
+
+/** Plain-language read of the wallet distribution + momentum. */
+function computeSignals(wallets: Wallet[], supply: number, change24h: number): Signal[] {
+  const out: Signal[] = [];
+  if (!wallets.length) return out;
+
+  const top = wallets[0].holdings / supply * 100;
+  const top10 = wallets.slice(0, 10).reduce((s, w) => s + w.holdings, 0) / supply * 100;
+  const clusterWallets = wallets.filter(w => w.cluster > 0);
+  const clusterHold = clusterWallets.reduce((s, w) => s + w.holdings, 0) / supply * 100;
+  const clusterCount = clusterWallets.length;
+
+  // Single-whale dump risk
+  if (top >= 15)      out.push({ level: 'danger', text: `One wallet holds ${top.toFixed(0)}% — it could dump the floor` });
+  else if (top >= 8)  out.push({ level: 'warn',   text: `Top wallet holds ${top.toFixed(0)}% — watch for a dump` });
+  else                out.push({ level: 'good',   text: `No whale — biggest wallet is only ${top.toFixed(1)}%` });
+
+  // Concentration
+  if (top10 >= 60)      out.push({ level: 'danger', text: `Top 10 wallets hold ${top10.toFixed(0)}% — very concentrated` });
+  else if (top10 >= 40) out.push({ level: 'warn',   text: `Top 10 hold ${top10.toFixed(0)}% — somewhat concentrated` });
+  else                  out.push({ level: 'good',   text: `Top 10 hold ${top10.toFixed(0)}% — well spread out` });
+
+  // Linked clusters (insider / sybil)
+  if (clusterHold >= 18)      out.push({ level: 'danger', text: `${clusterCount} linked wallets hold ${clusterHold.toFixed(0)}% — likely insiders` });
+  else if (clusterHold >= 8)  out.push({ level: 'warn',   text: `${clusterCount} linked wallets hold ${clusterHold.toFixed(0)}%` });
+  else                        out.push({ level: 'good',   text: `Few linked wallets — looks organic` });
+
+  // Momentum (pump / dump)
+  if (change24h >= 25)       out.push({ level: 'good',   text: `Volume +${change24h.toFixed(0)}% (24h) — heating up 🔥` });
+  else if (change24h <= -25) out.push({ level: 'danger', text: `Volume ${change24h.toFixed(0)}% (24h) — cooling off fast` });
+
+  // Surface dangers first, then warns, then good.
+  const order: Record<Level, number> = { danger: 0, warn: 1, good: 2 };
+  return out.sort((a, b) => order[a.level] - order[b.level]).slice(0, 5);
+}
+
 export default function Bubbles() {
   const [search, setSearch] = useState('');
   const [searching, setSearching] = useState(false);
@@ -96,6 +135,10 @@ export default function Bubbles() {
   const risk = useMemo(
     () => selected ? riskScore(wallets, selected.supply) : { score: 0, label: '', color: '' },
     [wallets, selected?.supply],
+  );
+  const signals = useMemo(
+    () => selected ? computeSignals(wallets, selected.supply, selected.change24h) : [],
+    [wallets, selected?.supply, selected?.change24h],
   );
 
   return (
@@ -245,6 +288,34 @@ export default function Bubbles() {
             </div>
           </div>
 
+          {/* PLAIN-LANGUAGE SIGNALS — the quick read */}
+          <div
+            style={{
+              display: 'grid', gap: 8,
+              marginBottom: 12,
+            }}
+          >
+            {signals.map((sig, i) => (
+              <div
+                key={i}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '11px 14px',
+                  borderRadius: 12,
+                  background: `${LEVEL_COLOR[sig.level]}14`,
+                  border: `1px solid ${LEVEL_COLOR[sig.level]}40`,
+                }}
+              >
+                <span style={{ fontSize: 15, lineHeight: 1 }}>
+                  {sig.level === 'danger' ? '🔴' : sig.level === 'warn' ? '🟡' : '🟢'}
+                </span>
+                <span style={{ fontSize: 13, color: '#fff', lineHeight: 1.35 }}>
+                  {sig.text}
+                </span>
+              </div>
+            ))}
+          </div>
+
           {/* BUBBLE MAP */}
           <BubbleCanvas wallets={wallets} supply={selected.supply} />
 
@@ -267,9 +338,6 @@ export default function Bubbles() {
             </div>
           </div>
 
-          {/* Stats */}
-          <Stats wallets={wallets} supply={selected.supply} />
-
           {/* Top holders table */}
           <div
             style={{
@@ -291,7 +359,7 @@ export default function Bubbles() {
             >
               Top Holders
             </div>
-            {wallets.slice(0, 10).map((w, i) => (
+            {wallets.slice(0, 5).map((w, i) => (
               <div
                 key={w.id}
                 style={{
@@ -468,38 +536,6 @@ function BubbleCanvas({ wallets, supply }: { wallets: Wallet[]; supply: number }
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function Stats({ wallets, supply }: { wallets: Wallet[]; supply: number }) {
-  const top1 = wallets[0]?.holdings || 0;
-  const top10 = wallets.slice(0, 10).reduce((s, w) => s + w.holdings, 0);
-  const clustered = wallets.filter(w => w.cluster > 0).reduce((s, w) => s + w.holdings, 0);
-  const clusterCount = new Set(wallets.filter(w => w.cluster > 0).map(w => w.cluster)).size;
-
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-      <Stat k="Top wallet"     v={`${pct(top1, supply).toFixed(1)}%`} />
-      <Stat k="Top 10 hold"    v={`${pct(top10, supply).toFixed(1)}%`} />
-      <Stat k="Clusters"       v={String(clusterCount)} />
-      <Stat k="Cluster hold"   v={`${pct(clustered, supply).toFixed(1)}%`} />
-    </div>
-  );
-}
-
-function Stat({ k, v }: { k: string; v: string }) {
-  return (
-    <div
-      style={{
-        padding: '10px 12px',
-        background: 'rgba(255,255,255,0.03)',
-        border: '1px solid rgba(255,255,255,0.06)',
-        borderRadius: 12,
-      }}
-    >
-      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>{k}</div>
-      <div style={{ fontSize: 14, color: '#fff', fontFamily: 'var(--font-mono), monospace', fontWeight: 700, marginTop: 4 }}>{v}</div>
     </div>
   );
 }
