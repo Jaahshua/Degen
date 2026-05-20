@@ -53,9 +53,8 @@ body {
 }
 
 /* =====================================================================
-   PRIMARY BUTTON — clean red->coral->gold gradient. Used on every
-   primary CTA (Buy, Sniper, $ Deposit, …). Class kept as .btn-blood
-   so existing call sites don't need to change.
+   PRIMARY BUTTON — cream "sclera" fill + dark blood rim, no veins.
+   Class kept as .btn-blood so existing call sites don't change.
    ===================================================================== */
 .btn-blood {
   position: relative;
@@ -63,25 +62,25 @@ body {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  background: linear-gradient(135deg, #dc2626 0%, #f25b3f 55%, #fbbf24 100%);
-  color: #fff;
-  font-weight: 800;
+  background: linear-gradient(180deg, #fef5e0 0%, #efddc1 100%);
+  color: #2a0a0a;
+  font-weight: 900;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  border: none;
+  border: 2px solid #4a1818;
   border-radius: 999px;
   cursor: pointer;
   box-shadow:
-    0 10px 26px -12px rgba(220, 38, 38, 0.7),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    0 10px 26px -12px rgba(220, 38, 38, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
   transition: filter 160ms ease, box-shadow 160ms ease, transform 100ms ease;
 }
 
 .btn-blood:hover {
-  filter: brightness(1.07);
+  filter: brightness(1.04);
   box-shadow:
-    0 14px 32px -10px rgba(220, 38, 38, 0.85),
-    inset 0 1px 0 rgba(255, 255, 255, 0.32);
+    0 14px 32px -10px rgba(220, 38, 38, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
 .btn-blood:active { transform: scale(0.985); }

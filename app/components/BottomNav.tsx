@@ -6,23 +6,15 @@ import { useAccount } from 'wagmi';
 import type { View } from '../page';
 
 export default function BottomNav({
-  view, onView,
+  view, onView, onSearch,
 }: {
   view: View;
   onView: (v: View) => void;
+  onSearch: () => void;
 }) {
   const { isConnected } = useAccount();
   const { openConnectModal } = useConnectModal();
   const { openAccountModal } = useAccountModal();
-
-  const onSearch = () => {
-    if (view !== 'markets') onView('markets');
-    setTimeout(() => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      const el = document.querySelector('input[placeholder^="Search"]') as HTMLInputElement | null;
-      el?.focus({ preventScroll: true });
-    }, 50);
-  };
 
   const onAccount = () => {
     if (isConnected) openAccountModal?.();

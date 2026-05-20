@@ -6,9 +6,10 @@ const N = 10;
 
 function stateFor(progress: number, i: number): EyeState {
   const slotStart = i / N;
-  const slotMid   = (i + 0.5) / N;
+  // Normal eye lingers for ~75% of the slot before turning bloodshot.
+  const slotFlip  = (i + 0.78) / N;
   if (progress <= slotStart) return 'closed';
-  if (progress <= slotMid)   return 'normal';
+  if (progress <= slotFlip)  return 'normal';
   return 'bloodshot';
 }
 
