@@ -23,7 +23,7 @@ export default function DegenSea() {
 
       <TopBar />
 
-      <main style={{ paddingBottom: 16 }}>
+      <main style={{ paddingTop: 60, paddingBottom: 16 }}>
         {view === 'markets' && <Markets />}
         {view === 'bubbles' && <Bubbles />}
         {view === 'sniper'  && <Sniper />}

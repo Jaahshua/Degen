@@ -9,15 +9,17 @@ export default function TopBar() {
   return (
     <header
       style={{
-        position: 'sticky',
+        position: 'fixed',
         top: 0,
+        left: 0,
+        right: 0,
         zIndex: 50,
-        minHeight: 64,
+        height: 60,
         background: '#000',
         borderBottom: '1px solid rgba(255,255,255,0.05)',
         display: 'flex',
         alignItems: 'center',
-        padding: '8px 16px',
+        padding: '0 16px',
         gap: 10,
       }}
     >

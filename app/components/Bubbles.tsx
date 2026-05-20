@@ -82,6 +82,7 @@ export default function Bubbles() {
   const [search, setSearch] = useState('');
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState<Collection | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   // Hydrate the initial selected collection (#1 by curated volume) on mount.
   useEffect(() => {
@@ -124,6 +125,7 @@ export default function Bubbles() {
 
   const pick = async (c: Collection) => {
     setSearch('');
+    setPickerOpen(false);
     const live = await fetchOpenSeaCollection(c);
     setSelected(live);
   };
@@ -142,116 +144,48 @@ export default function Bubbles() {
   );
 
   return (
-    <div style={{ maxWidth: 720, margin: '0 auto', padding: '0 12px 120px' }}>
-      {/* Sticky search */}
-      <div
-        style={{
-          position: 'sticky', top: 0, zIndex: 30,
-          background: '#000',
-          margin: '0 -12px',
-          padding: '12px 12px',
-          borderBottom: '1px solid rgba(255,255,255,0.05)',
-        }}
-      >
-        <div style={{ position: 'relative' }}>
-          <SearchIcon
-            size={16}
-            style={{
-              position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)',
-              color: 'rgba(255,255,255,0.4)', pointerEvents: 'none',
-            }}
-          />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Trace any collection (slug or name)…"
-            autoCapitalize="off" autoCorrect="off" spellCheck={false}
-            style={{
-              width: '100%', padding: '12px 40px 12px 40px',
-              borderRadius: 16,
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              color: '#fff', fontSize: 16,
-              fontFamily: 'var(--font-mono), monospace', outline: 'none',
-            }}
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              style={{
-                position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
-                width: 28, height: 28,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'transparent', border: 'none',
-                color: 'rgba(255,255,255,0.4)', cursor: 'pointer',
-              }}
-              aria-label="Clear"
-            >
-              <X size={14} />
-            </button>
-          )}
-        </div>
-
-        {/* Suggestions dropdown */}
-        {q && (
-          <div
-            style={{
-              marginTop: 6,
-              borderRadius: 12,
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              overflow: 'hidden',
-              maxHeight: 240, overflowY: 'auto',
-            }}
-          >
-            {searching && (
-              <div style={{ padding: '12px', fontSize: 11, color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-mono), monospace', textAlign: 'center' }}>
-                Searching OpenSea…
-              </div>
-            )}
-            {!searching && suggestions.length === 0 && (
-              <div style={{ padding: '12px', fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono), monospace', textAlign: 'center' }}>
-                No collection found
-              </div>
-            )}
-            {suggestions.map(s => (
-              <button
-                key={s.slug}
-                onClick={() => pick(s)}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '8px 10px',
-                  background: 'transparent', border: 'none',
-                  borderBottom: '1px solid rgba(255,255,255,0.04)',
-                  cursor: 'pointer', textAlign: 'left',
-                }}
-              >
-                <Thumb collection={s} size={36} radius={10} />
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div style={{ color: '#fff', fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {s.name}
-                  </div>
-                  <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, fontFamily: 'var(--font-mono), monospace' }}>
-                    {s.ticker} · {s.slug}
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
+    <div style={{ maxWidth: 720, margin: '0 auto', padding: '12px 12px 120px' }}>
       {/* HEADER */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0' }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 900, letterSpacing: '-0.03em', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <NetworkIcon size={20} className="text-sunset" />
-            <span><span className="text-sunset">Bubble</span> Map</span>
-          </h1>
-          <div style={{ marginTop: 4, fontSize: 10, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.18em', fontFamily: 'var(--font-mono), monospace' }}>
-            Trace wallet clusters · Spot scam patterns
-          </div>
+      <div style={{ padding: '4px 0 12px' }}>
+        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 900, letterSpacing: '-0.03em', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <NetworkIcon size={20} className="text-sunset" />
+          <span><span className="text-sunset">Bubble</span> Map</span>
+        </h1>
+        <div style={{ marginTop: 4, fontSize: 10, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.18em', fontFamily: 'var(--font-mono), monospace' }}>
+          Trace wallet clusters · Spot scam patterns
         </div>
+
+        {/* Collection selector chip — opens the picker modal */}
+        <button
+          onClick={() => setPickerOpen(true)}
+          style={{
+            marginTop: 12,
+            width: '100%',
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '10px 12px',
+            borderRadius: 14,
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            cursor: 'pointer', textAlign: 'left',
+          }}
+        >
+          {selected ? (
+            <>
+              <Thumb collection={selected} size={36} radius={10} />
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ color: '#fff', fontSize: 14, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {selected.name}
+                </div>
+                <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, fontFamily: 'var(--font-mono), monospace' }}>
+                  Tracing · tap to change
+                </div>
+              </div>
+            </>
+          ) : (
+            <div style={{ flex: 1, color: 'rgba(255,255,255,0.55)', fontSize: 14 }}>Pick a collection…</div>
+          )}
+          <SearchIcon size={16} style={{ color: 'rgba(255,255,255,0.5)' }} />
+        </button>
       </div>
 
       {!selected && <Skeleton />}
@@ -407,6 +341,94 @@ export default function Bubbles() {
             </span>
           </div>
         </>
+      )}
+
+      {/* Collection picker modal */}
+      {pickerOpen && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 70,
+            background: '#000',
+            display: 'flex', flexDirection: 'column',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '12px 12px',
+              paddingTop: 'max(12px, env(safe-area-inset-top))',
+              borderBottom: '1px solid rgba(255,255,255,0.06)',
+            }}
+          >
+            <div style={{ position: 'relative', flex: 1 }}>
+              <SearchIcon size={16}
+                style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'rgba(255,255,255,0.4)', pointerEvents: 'none' }}
+              />
+              <input
+                autoFocus
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Trace any collection (slug or name)…"
+                autoCapitalize="off" autoCorrect="off" spellCheck={false}
+                style={{
+                  width: '100%', padding: '12px 14px 12px 40px',
+                  borderRadius: 14,
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  color: '#fff', fontSize: 16,
+                  fontFamily: 'var(--font-mono), monospace', outline: 'none',
+                }}
+              />
+            </div>
+            <button
+              onClick={() => { setPickerOpen(false); setSearch(''); }}
+              style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.7)', fontSize: 13, fontWeight: 700, cursor: 'pointer', padding: '0 4px', fontFamily: 'var(--font-mono), monospace' }}
+            >
+              Cancel
+            </button>
+          </div>
+
+          <div style={{ flex: 1, overflowY: 'auto', padding: '0 12px' }}>
+            {!q && (
+              <div style={{ padding: '10px 2px', fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono), monospace' }}>
+                Collections
+              </div>
+            )}
+            {searching && (
+              <div style={{ padding: '20px', fontSize: 12, color: 'rgba(255,255,255,0.5)', fontFamily: 'var(--font-mono), monospace', textAlign: 'center' }}>
+                Searching OpenSea…
+              </div>
+            )}
+            {!searching && q && suggestions.length === 0 && (
+              <div style={{ padding: '40px 0', fontSize: 13, color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
+                No collection found
+              </div>
+            )}
+            {(q ? suggestions : COLLECTIONS).map(s => (
+              <button
+                key={s.slug}
+                onClick={() => pick(s)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '10px 0',
+                  background: 'transparent', border: 'none',
+                  borderBottom: '1px solid rgba(255,255,255,0.05)',
+                  cursor: 'pointer', textAlign: 'left',
+                }}
+              >
+                <Thumb collection={s} size={44} radius={11} />
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ color: '#fff', fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {s.name}
+                  </div>
+                  <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, fontFamily: 'var(--font-mono), monospace' }}>
+                    {s.ticker} · {s.slug}
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
