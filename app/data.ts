@@ -208,42 +208,84 @@ export function layoutBubbles(
    and tracks status.
    ============================================================ */
 
-export type SniperSide = 'buy' | 'sell';
-
-export type SniperTrigger =
+export type StrategyId =
   // buy-side
-  | 'mint-live'      // fire the moment a mint opens
-  | 'floor-below'    // floor drops to triggerValue Ξ
-  | 'underpriced'    // a listing appears triggerValue % under floor
+  | 'snipe-mint' | 'buy-floor' | 'buy-underpriced' | 'whale-copy' | 'dump-cascade'
+  // flip
+  | 'flip'
   // sell-side
-  | 'take-profit'    // floor rises to triggerValue Ξ
-  | 'stop-loss'      // floor falls to triggerValue Ξ
-  | 'trailing-stop'; // floor drops triggerValue % from its peak
+  | 'take-profit' | 'stop-loss' | 'trailing-stop' | 'rug-guard' | 'offer-accept';
+
+export type StrategyKind = 'buy' | 'sell' | 'flip';
+
+export type Strategy = {
+  id: StrategyId;
+  label: string;
+  kind: StrategyKind;
+  blurb: string;
+  valueLabel?: string;
+  valueUnit?: 'eth' | 'pct' | 'score';
+  extra?: 'wallet';
+  full: boolean; // fully implemented (vs. configurable scaffold)
+};
+
+export const STRATEGIES: Strategy[] = [
+  // BUY
+  { id: 'snipe-mint',      label: 'Snipe Mint',          kind: 'buy',  blurb: 'Fire the instant a mint opens.',                                                  full: false },
+  { id: 'buy-floor',       label: 'Buy the Floor',       kind: 'buy',  blurb: 'Buy when the floor drops to your price.', valueLabel: 'Buy at or below',  valueUnit: 'eth', full: false },
+  { id: 'buy-underpriced', label: 'Underpriced Listing', kind: 'buy',  blurb: 'Grab any listing posted under floor.',    valueLabel: 'Under floor by',   valueUnit: 'pct', full: false },
+  { id: 'whale-copy',      label: 'Whale Copy',          kind: 'buy',  blurb: 'Buy when a wallet you track buys.',        extra: 'wallet',                                  full: false },
+  { id: 'dump-cascade',    label: 'Buy the Dump',        kind: 'buy',  blurb: 'Buy when the floor craters fast.',         valueLabel: 'Floor drops by',   valueUnit: 'pct', full: false },
+  // FLIP
+  { id: 'flip',            label: 'Flip Bot',            kind: 'flip', blurb: 'Buy at floor, auto-relist at a markup.',   valueLabel: 'Relist markup',    valueUnit: 'pct', full: true },
+  // SELL
+  { id: 'take-profit',     label: 'Take Profit',         kind: 'sell', blurb: 'Sell when the floor rises to target.',     valueLabel: 'Sell at or above', valueUnit: 'eth', full: false },
+  { id: 'stop-loss',       label: 'Stop Loss',           kind: 'sell', blurb: 'Sell if the floor falls to your line.',    valueLabel: 'Sell at or below', valueUnit: 'eth', full: false },
+  { id: 'trailing-stop',   label: 'Trailing Stop',       kind: 'sell', blurb: 'Sell if floor drops X% from its peak.',    valueLabel: 'Trail by',         valueUnit: 'pct', full: false },
+  { id: 'rug-guard',       label: 'Rug Guard',           kind: 'sell', blurb: 'Auto-sell if wallet-risk spikes.',         valueLabel: 'Risk threshold',   valueUnit: 'score', full: true },
+  { id: 'offer-accept',    label: 'Auto-Accept Offers',  kind: 'sell', blurb: 'Accept any offer above your price.',       valueLabel: 'Accept at or above', valueUnit: 'eth', full: false },
+];
+
+export const STRATEGY_MAP = Object.fromEntries(
+  STRATEGIES.map(s => [s.id, s]),
+) as Record<StrategyId, Strategy>;
 
 export type Sniper = {
   id: string;
   slug: string;
   name: string;
-  side: SniperSide;
-  trigger: SniperTrigger;
-  triggerValue?: number;       // Ξ or %, depending on trigger
-  maxPrice: number;            // buy: max pay/item · sell: min accept/item
+  strategy: StrategyId;
+  value?: number;          // Ξ / % / risk-score depending on strategy
+  watchWallet?: string;    // whale-copy
+  maxPrice: number;        // buy: max pay/item · sell: min accept/item
   quantity: number;
   gas: 'standard' | 'fast' | 'instant';
   network: 'ethereum' | 'base';
   createdAt: number;
   status: 'watching' | 'triggered' | 'stopped' | 'done';
   triggeredAt?: number;
+  // flip runtime
+  leg?: 'buying' | 'holding' | 'sold';
+  buyFill?: number;
+  sellFill?: number;
+  // rug-guard runtime
+  riskBaseline?: number;
+  riskNow?: number;
 };
 
-export const TRIGGER_LABEL: Record<SniperTrigger, string> = {
-  'mint-live':     'Mint goes live',
-  'floor-below':   'Floor drops to',
-  'underpriced':   'Listing under floor',
-  'take-profit':   'Floor rises to',
-  'stop-loss':     'Floor falls to',
-  'trailing-stop': 'Trailing stop',
-};
+/**
+ * Deterministic 0–100 wallet-risk score for a collection — same math
+ * the Bubble Map uses, exposed so Rug Guard snipers can watch it.
+ */
+export function collectionRiskScore(slug: string, supply: number): number {
+  const wallets = generateBubbleMap(slug, supply, 36);
+  if (!wallets.length) return 0;
+  const top = wallets[0].holdings / supply * 100;
+  const top10 = wallets.slice(0, 10).reduce((s, w) => s + w.holdings, 0) / supply * 100;
+  const inClusters = wallets.filter(w => w.cluster > 0).reduce((s, w) => s + w.holdings, 0) / supply * 100;
+  const score = Math.min(40, top * 6) + Math.min(30, top10 * 0.8) + Math.min(30, inClusters * 1.2);
+  return Math.min(100, Math.round(score));
+}
 
 const SNIPER_KEY = 'degensea-snipers';
 
