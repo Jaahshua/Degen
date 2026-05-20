@@ -271,6 +271,10 @@ export type Sniper = {
   // rug-guard runtime
   riskBaseline?: number;
   riskNow?: number;
+  // pnl tracking
+  armFloor?: number;   // floor at arm time (cost-basis reference)
+  entry?: number;      // execution price when the bot fired
+  mark?: number;       // simulated current floor for unrealized PnL
 };
 
 /**

@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useAccount, useBalance } from 'wagmi';
 import {
   Crosshair, Plus, X, Pause, Trash2, Search as SearchIcon, Zap,
-  ShieldCheck, Info, Target, MousePointerClick, BellRing, ChevronRight,
-  Repeat, ShieldAlert, ArrowDownUp,
+  ShieldCheck, Info, Target, MousePointerClick, BellRing, ChevronRight, ChevronDown,
+  Repeat, ShieldAlert, ArrowDownUp, Wallet as WalletIcon, AlertTriangle,
 } from 'lucide-react';
 import {
   readSnipers, writeSnipers, type Sniper as SniperT,
@@ -17,6 +18,35 @@ import { useWalletGate } from '../hooks/useWalletGate';
 import { toast } from './Toast';
 
 const ADVANCE_MS = 9_000;
+
+/** Realized/unrealized PnL for a fired bot, or null if nothing to show yet. */
+function pnlOf(s: SniperT): { realized: boolean; pnl: number; roi: number } | null {
+  const qty = s.quantity || 1;
+  if (s.strategy === 'flip') {
+    if (s.sellFill && s.buyFill) {
+      return { realized: true, pnl: (s.sellFill - s.buyFill) * qty, roi: (s.sellFill / s.buyFill - 1) * 100 };
+    }
+    if (s.buyFill && s.mark) {
+      return { realized: false, pnl: (s.mark - s.buyFill) * qty, roi: (s.mark / s.buyFill - 1) * 100 };
+    }
+    return null;
+  }
+  if (s.status !== 'triggered' && s.status !== 'done') return null;
+  const meta = STRATEGY_MAP[s.strategy];
+  if (meta?.kind === 'sell' && s.entry && s.armFloor) {
+    return { realized: true, pnl: (s.entry - s.armFloor) * qty, roi: (s.entry / s.armFloor - 1) * 100 };
+  }
+  if (s.entry && s.mark) {
+    return { realized: false, pnl: (s.mark - s.entry) * qty, roi: (s.mark / s.entry - 1) * 100 };
+  }
+  return null;
+}
+
+function driftMark(prev: number | undefined, base: number | undefined): number | undefined {
+  const m = prev ?? base;
+  if (!m) return m;
+  return +(m * (1 + (Math.random() - 0.48) * 0.06)).toFixed(3);
+}
 
 const KIND_COLOR: Record<StrategyKind, string> = {
   buy: '#22c55e', sell: '#ef4444', flip: '#fbbf24',
@@ -49,6 +79,9 @@ export default function SniperView() {
   const [editing, setEditing] = useState<boolean>(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const gate = useWalletGate();
+  const { address, isConnected } = useAccount();
+  const { data: balance } = useBalance({ address });
+  const balanceEth = balance ? parseFloat(balance.formatted) : 0;
 
   useEffect(() => {
     // Drop any legacy entries that predate the strategy model.
@@ -74,7 +107,7 @@ export default function SniperView() {
           if (leg === 'buying' && Math.random() < 0.4) {
             changed = true;
             toast(`🟢 Flip filled · bought ${s.name} @ ${s.maxPrice} Ξ`);
-            return { ...s, leg: 'holding', buyFill: s.maxPrice, status: 'watching' };
+            return { ...s, leg: 'holding', buyFill: s.maxPrice, status: 'watching', mark: s.maxPrice };
           }
           if (leg === 'holding' && Math.random() < 0.35) {
             const markup = (s.value ?? 15) / 100;
@@ -83,6 +116,7 @@ export default function SniperView() {
             toast(`💰 Flip sold · ${s.name} @ ${sellAt} Ξ (+${s.value}%)`);
             return { ...s, leg: 'sold', sellFill: sellAt, status: 'done', triggeredAt: Date.now() };
           }
+          if (leg === 'holding') { changed = true; return { ...s, mark: driftMark(s.mark, s.buyFill) }; }
           return s;
         }
 
@@ -94,10 +128,16 @@ export default function SniperView() {
           if (riskNow >= (s.value ?? 75)) {
             changed = true;
             toast(`🛡️ Rug Guard tripped · sold ${s.name} (risk ${riskNow})`);
-            return { ...s, riskNow, status: 'triggered', triggeredAt: Date.now() };
+            return { ...s, riskNow, entry: s.maxPrice, mark: driftMark(s.mark, s.armFloor), status: 'triggered', triggeredAt: Date.now() };
           }
           changed = true;
           return { ...s, riskNow };
+        }
+
+        // ---- already-fired position: just mark-to-market ----
+        if (s.status === 'triggered') {
+          changed = true;
+          return { ...s, mark: driftMark(s.mark, s.entry ?? s.armFloor) };
         }
 
         // ---- everything else: light random fire ----
@@ -105,7 +145,7 @@ export default function SniperView() {
           changed = true;
           const kind = STRATEGY_MAP[s.strategy]?.kind;
           toast(`🎯 Sniper hit · ${kind === 'sell' ? 'sold' : 'bought'} ${s.quantity} ${s.name}`);
-          return { ...s, status: 'triggered', triggeredAt: Date.now() };
+          return { ...s, status: 'triggered', entry: s.maxPrice, mark: s.armFloor ?? s.maxPrice, triggeredAt: Date.now() };
         }
         return s;
       });
@@ -158,9 +198,26 @@ export default function SniperView() {
           Eleven strategies across buy, flip and sell. Set the rule, set the cap —
           the bot watches and prepares the trade. Your wallet signs.
         </p>
-        <button className="btn-blood" style={{ marginTop: 14, padding: '10px 18px', fontSize: 13 }} onClick={openNew}>
-          <Plus size={13} /> <span>New sniper</span>
-        </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
+          <button className="btn-blood" style={{ padding: '10px 18px', fontSize: 13 }} onClick={openNew}>
+            <Plus size={13} /> <span>New sniper</span>
+          </button>
+          {/* Balance checker */}
+          <div
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '8px 12px', borderRadius: 999,
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+              fontFamily: 'var(--font-mono), monospace', fontSize: 12,
+            }}
+          >
+            <WalletIcon size={13} style={{ color: isConnected ? 'var(--up)' : 'rgba(255,255,255,0.4)' }} />
+            {isConnected
+              ? <span style={{ color: '#fff', fontWeight: 700 }}>{balanceEth.toFixed(3)} <span style={{ opacity: 0.7 }}>{balance?.symbol ?? 'ETH'}</span></span>
+              : <span style={{ color: 'rgba(255,255,255,0.5)' }}>Wallet not connected</span>}
+          </div>
+        </div>
       </div>
 
       {/* List */}
@@ -179,7 +236,7 @@ export default function SniperView() {
         </div>
       )}
 
-      {editing && <SniperForm onCancel={() => setEditing(false)} onSave={save} />}
+      {editing && <SniperForm balanceEth={balanceEth} onCancel={() => setEditing(false)} onSave={save} />}
       {infoOpen && <SniperInfo onClose={() => setInfoOpen(false)} />}
     </div>
   );
@@ -188,7 +245,9 @@ export default function SniperView() {
 function SniperCard({ s, onStop, onResume, onRemove }: {
   s: SniperT; onStop: () => void; onResume: () => void; onRemove: () => void;
 }) {
+  const [open, setOpen] = useState(false);
   const meta = STRATEGY_MAP[s.strategy];
+  const pnl = pnlOf(s);
   const statusMap = {
     watching:  { color: 'var(--up)',            pulse: true,  label: s.strategy === 'flip' && s.leg === 'holding' ? 'Holding' : 'Watching' },
     triggered: { color: '#fbbf24',              pulse: false, label: 'Triggered' },
@@ -203,7 +262,10 @@ function SniperCard({ s, onStop, onResume, onRemove }: {
 
   return (
     <div style={{ padding: '12px 14px', borderRadius: 14, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <div
+        onClick={() => setOpen(o => !o)}
+        style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+      >
         <div style={{ width: 44, height: 44, borderRadius: 12, background: `hsl(${(s.slug.charCodeAt(0) * 23) % 360} 70% 45%)`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, fontSize: 14, flexShrink: 0 }}>
           {s.name.slice(0, 2).toUpperCase()}
         </div>
@@ -222,6 +284,13 @@ function SniperCard({ s, onStop, onResume, onRemove }: {
             {summary(s)}
           </div>
         </div>
+        {/* PnL badge + expand chevron */}
+        {pnl && (
+          <span style={{ fontSize: 13, fontWeight: 800, fontFamily: 'var(--font-mono), monospace', color: pnl.pnl >= 0 ? 'var(--up)' : 'var(--down)' }}>
+            {pnl.pnl >= 0 ? '+' : ''}{pnl.pnl.toFixed(3)} Ξ
+          </span>
+        )}
+        <ChevronDown size={16} style={{ color: 'rgba(255,255,255,0.4)', transition: 'transform 150ms ease', transform: open ? 'rotate(180deg)' : 'none', flexShrink: 0 }} />
       </div>
 
       {/* Flip legs */}
@@ -252,6 +321,43 @@ function SniperCard({ s, onStop, onResume, onRemove }: {
         </div>
       )}
 
+      {/* Expanded detail + PnL */}
+      {open && (
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+          {/* PnL stats */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 12 }}>
+            <Metric k={s.strategy === 'flip' ? 'Buy' : (meta?.kind === 'sell' ? 'Cost basis' : 'Entry')}
+                    v={fmtEthOrDash(s.strategy === 'flip' ? s.buyFill : (meta?.kind === 'sell' ? s.armFloor : s.entry))} />
+            <Metric k={s.strategy === 'flip' ? 'Sell' : 'Mark'}
+                    v={fmtEthOrDash(s.strategy === 'flip' ? s.sellFill : s.mark)} />
+            <Metric k="PnL" v={pnl ? `${pnl.pnl >= 0 ? '+' : ''}${pnl.pnl.toFixed(3)} Ξ` : '—'}
+                    color={pnl ? (pnl.pnl >= 0 ? 'var(--up)' : 'var(--down)') : undefined} />
+            <Metric k="ROI" v={pnl ? `${pnl.roi >= 0 ? '+' : ''}${pnl.roi.toFixed(1)}%` : '—'}
+                    color={pnl ? (pnl.roi >= 0 ? 'var(--up)' : 'var(--down)') : undefined} />
+          </div>
+
+          {/* Config recap */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px 16px', fontSize: 11, fontFamily: 'var(--font-mono), monospace' }}>
+            <Recap k="Strategy" v={meta?.label ?? s.strategy} />
+            <Recap k="Trigger"  v={summary(s)} />
+            <Recap k="Quantity" v={`${s.quantity}`} />
+            <Recap k={meta?.kind === 'sell' ? 'Min accept' : 'Cap / item'} v={`${s.maxPrice} Ξ`} />
+            <Recap k="Floor @ arm" v={s.armFloor ? `${s.armFloor.toFixed(2)} Ξ` : '—'} />
+            <Recap k="Fills" v={pnl ? '1' : '0'} />
+            <Recap k="Armed" v={timeAgo(s.createdAt)} />
+            <Recap k="Fired" v={s.triggeredAt ? timeAgo(s.triggeredAt) : '—'} />
+          </div>
+
+          {pnl?.realized && (
+            <div style={{ marginTop: 10, fontSize: 11, color: 'rgba(255,255,255,0.55)', fontFamily: 'var(--font-mono), monospace' }}>
+              {s.strategy === 'rug-guard'
+                ? `Exited before further downside · realized PnL locked.`
+                : `Position closed · PnL realized.`}
+            </div>
+          )}
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, fontSize: 10, fontFamily: 'var(--font-mono), monospace', color: 'rgba(255,255,255,0.45)' }}>
         <span>gas: <strong style={{ color: '#fff' }}>{s.gas}</strong>  ·  net: <strong style={{ color: '#fff' }}>{s.network}</strong></span>
         <div style={{ display: 'flex', gap: 6 }}>
@@ -263,6 +369,35 @@ function SniperCard({ s, onStop, onResume, onRemove }: {
           <button onClick={onRemove} title="Remove" style={{ ...iconBtnStyle, color: 'rgba(239,68,68,0.8)' }}><Trash2 size={13} /></button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function fmtEthOrDash(n?: number) {
+  return n != null ? `${n.toFixed(3)} Ξ` : '—';
+}
+function timeAgo(ts: number) {
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return `${s}s ago`;
+  if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+
+function Metric({ k, v, color }: { k: string; v: string; color?: string }) {
+  return (
+    <div style={{ padding: '8px 10px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10 }}>
+      <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{k}</div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: color ?? '#fff', fontFamily: 'var(--font-mono), monospace', marginTop: 3 }}>{v}</div>
+    </div>
+  );
+}
+
+function Recap({ k, v }: { k: string; v: string }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+      <span style={{ color: 'rgba(255,255,255,0.45)' }}>{k}</span>
+      <span style={{ color: '#fff', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v}</span>
     </div>
   );
 }
@@ -283,7 +418,7 @@ const iconBtnStyle: React.CSSProperties = {
   borderRadius: 8, color: 'rgba(255,255,255,0.75)', cursor: 'pointer',
 };
 
-function SniperForm({ onCancel, onSave }: { onCancel: () => void; onSave: (s: SniperT) => void }) {
+function SniperForm({ balanceEth, onCancel, onSave }: { balanceEth: number; onCancel: () => void; onSave: (s: SniperT) => void }) {
   const [step, setStep] = useState<'target' | 'strategy' | 'config'>('target');
   const [target, setTarget] = useState<Collection | null>(null);
   const [strategy, setStrategy] = useState<StrategyId | null>(null);
@@ -348,12 +483,18 @@ function SniperForm({ onCancel, onSave }: { onCancel: () => void; onSave: (s: Sn
   const needsValue = !!meta?.valueUnit;
   const needsWallet = meta?.extra === 'wallet';
 
+  // Buy & flip strategies spend ETH up front; sell strategies don't.
+  const spends = meta?.kind === 'buy' || meta?.kind === 'flip';
+  const requiredEth = spends ? (parseFloat(maxPrice) || 0) * quantity : 0;
+  const insufficient = spends && requiredEth > balanceEth;
+
   const canSave =
     !!target && !!strategy &&
     parseFloat(maxPrice) > 0 &&
     (!needsValue || parseFloat(value) > 0) &&
     (!needsWallet || /^0x[a-fA-F0-9]{40}$/.test(wallet.trim())) &&
-    quantity > 0;
+    quantity > 0 &&
+    !insufficient;
 
   const submit = () => {
     if (!target || !strategy || !canSave) return;
@@ -502,6 +643,29 @@ function SniperForm({ onCancel, onSave }: { onCancel: () => void; onSave: (s: Sn
               {(['ethereum', 'base'] as const).map(n => <Toggle key={n} active={network === n} onClick={() => setNetwork(n)} label={n.toUpperCase()} />)}
             </div>
 
+            {/* Balance checker */}
+            {spends && (
+              <div
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '10px 12px', marginBottom: 10, borderRadius: 12,
+                  fontSize: 11, fontFamily: 'var(--font-mono), monospace',
+                  background: insufficient ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${insufficient ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                }}
+              >
+                <span style={{ color: 'rgba(255,255,255,0.6)' }}>
+                  Cost <strong style={{ color: '#fff' }}>{requiredEth.toFixed(3)} Ξ</strong>
+                  {' · '}Balance <strong style={{ color: '#fff' }}>{balanceEth.toFixed(3)} Ξ</strong>
+                </span>
+                {insufficient && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: 'var(--down)', fontWeight: 800 }}>
+                    <AlertTriangle size={12} /> LOW
+                  </span>
+                )}
+              </div>
+            )}
+
             <div style={{ padding: '10px 12px', background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 12, fontSize: 11, color: 'rgba(255,255,255,0.7)', display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 14 }}>
               <ShieldCheck size={14} style={{ color: 'var(--up)', flexShrink: 0, marginTop: 1 }} />
               <span>When triggered, your wallet signs the {meta.kind === 'sell' ? 'sale' : meta.id === 'flip' ? 'buy & relist' : 'buy'}. Nothing executes without your approval.</span>
@@ -509,7 +673,7 @@ function SniperForm({ onCancel, onSave }: { onCancel: () => void; onSave: (s: Sn
 
             <button className="btn-blood" disabled={!canSave} onClick={submit}
               style={{ width: '100%', padding: '14px 0', fontSize: 14, opacity: canSave ? 1 : 0.5, cursor: canSave ? 'pointer' : 'not-allowed' }}>
-              <span>Arm {meta.label}</span>
+              <span>{insufficient ? 'Insufficient Balance' : `Arm ${meta.label}`}</span>
             </button>
           </>
         )}
