@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search as SearchIcon, X, Loader2 } from 'lucide-react';
 import { COLLECTIONS, searchOpenSea, type Collection } from '../data';
+import type { View } from '../page';
 import Thumb from './Thumb';
 import TokenDetail from './TokenDetail';
 
@@ -15,7 +16,14 @@ function fmtUsd(n: number) {
   return `$${n.toFixed(0)}`;
 }
 
-export default function SearchOverlay({ open, onClose }: { open: boolean; onClose: () => void }) {
+export default function SearchOverlay({
+  open, onClose, view, onTrace,
+}: {
+  open: boolean;
+  onClose: () => void;
+  view: View;
+  onTrace: (c: Collection) => void;
+}) {
   const [q, setQ] = useState('');
   const [extra, setExtra] = useState<Collection | null>(null);
   const [searching, setSearching] = useState(false);
@@ -68,6 +76,12 @@ export default function SearchOverlay({ open, onClose }: { open: boolean; onClos
     return list;
   }, [localMatches, extra, query]);
 
+  const tracing = view === 'bubbles';
+  const handlePick = (c: Collection) => {
+    if (tracing) onTrace(c);
+    else setSelected(c);
+  };
+
   if (!open) return null;
 
   return (
@@ -96,7 +110,7 @@ export default function SearchOverlay({ open, onClose }: { open: boolean; onClos
             ref={inputRef}
             value={q}
             onChange={e => setQ(e.target.value)}
-            placeholder="Search any OpenSea collection…"
+            placeholder={tracing ? 'Trace any collection…' : 'Search any OpenSea collection…'}
             autoCapitalize="off" autoCorrect="off" spellCheck={false}
             style={{
               width: '100%', padding: '12px 40px 12px 40px',
@@ -132,7 +146,7 @@ export default function SearchOverlay({ open, onClose }: { open: boolean; onClos
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 12px' }}>
         {!query && (
           <div style={{ padding: '10px 2px', fontSize: 10, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono), monospace' }}>
-            Trending
+            {tracing ? 'Tap to trace' : 'Trending'}
           </div>
         )}
 
@@ -145,7 +159,7 @@ export default function SearchOverlay({ open, onClose }: { open: boolean; onClos
         {results.map(c => (
           <button
             key={c.slug}
-            onClick={() => setSelected(c)}
+            onClick={() => handlePick(c)}
             style={{
               width: '100%', display: 'flex', alignItems: 'center', gap: 12,
               padding: '10px 0',

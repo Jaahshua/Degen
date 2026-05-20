@@ -208,19 +208,41 @@ export function layoutBubbles(
    and tracks status.
    ============================================================ */
 
+export type SniperSide = 'buy' | 'sell';
+
+export type SniperTrigger =
+  // buy-side
+  | 'mint-live'      // fire the moment a mint opens
+  | 'floor-below'    // floor drops to triggerValue Ξ
+  | 'underpriced'    // a listing appears triggerValue % under floor
+  // sell-side
+  | 'take-profit'    // floor rises to triggerValue Ξ
+  | 'stop-loss'      // floor falls to triggerValue Ξ
+  | 'trailing-stop'; // floor drops triggerValue % from its peak
+
 export type Sniper = {
   id: string;
   slug: string;
   name: string;
-  trigger: 'mint-live' | 'floor-below';
-  triggerValue?: number;       // ETH for floor-below
-  maxPrice: number;            // max Ξ per item
+  side: SniperSide;
+  trigger: SniperTrigger;
+  triggerValue?: number;       // Ξ or %, depending on trigger
+  maxPrice: number;            // buy: max pay/item · sell: min accept/item
   quantity: number;
   gas: 'standard' | 'fast' | 'instant';
   network: 'ethereum' | 'base';
   createdAt: number;
   status: 'watching' | 'triggered' | 'stopped' | 'done';
   triggeredAt?: number;
+};
+
+export const TRIGGER_LABEL: Record<SniperTrigger, string> = {
+  'mint-live':     'Mint goes live',
+  'floor-below':   'Floor drops to',
+  'underpriced':   'Listing under floor',
+  'take-profit':   'Floor rises to',
+  'stop-loss':     'Floor falls to',
+  'trailing-stop': 'Trailing stop',
 };
 
 const SNIPER_KEY = 'degensea-snipers';

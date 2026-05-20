@@ -9,6 +9,7 @@ import BottomNav from './components/BottomNav';
 import LoadingScreen from './components/LoadingScreen';
 import SearchOverlay from './components/SearchOverlay';
 import Toast from './components/Toast';
+import type { Collection } from './data';
 
 export type View = 'markets' | 'bubbles' | 'sniper';
 
@@ -16,6 +17,7 @@ export default function DegenSea() {
   const [view, setView] = useState<View>('markets');
   const [loading, setLoading] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [bubbleTarget, setBubbleTarget] = useState<Collection | null>(null);
 
   return (
     <div style={{ minHeight: '100vh' }}>
@@ -25,12 +27,19 @@ export default function DegenSea() {
 
       <main style={{ paddingTop: 60, paddingBottom: 16 }}>
         {view === 'markets' && <Markets />}
-        {view === 'bubbles' && <Bubbles />}
+        {view === 'bubbles' && <Bubbles target={bubbleTarget} />}
         {view === 'sniper'  && <Sniper />}
       </main>
 
       <BottomNav view={view} onView={setView} onSearch={() => setSearchOpen(true)} />
-      <SearchOverlay open={searchOpen} onClose={() => setSearchOpen(false)} />
+
+      <SearchOverlay
+        open={searchOpen}
+        view={view}
+        onClose={() => setSearchOpen(false)}
+        onTrace={(c) => { setBubbleTarget(c); setSearchOpen(false); }}
+      />
+
       <Toast />
     </div>
   );

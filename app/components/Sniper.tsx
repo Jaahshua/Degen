@@ -7,8 +7,33 @@ import {
 } from 'lucide-react';
 import {
   readSnipers, writeSnipers, type Sniper as SniperT,
+  type SniperSide, type SniperTrigger, TRIGGER_LABEL,
   COLLECTIONS, fetchOpenSeaCollection, searchOpenSea, type Collection,
 } from '../data';
+
+function triggerSummary(s: SniperT): string {
+  switch (s.trigger) {
+    case 'mint-live':     return 'When mint goes live';
+    case 'floor-below':   return `Floor ≤ ${s.triggerValue ?? '?'} Ξ`;
+    case 'underpriced':   return `Listing ${s.triggerValue ?? '?'}% under floor`;
+    case 'take-profit':   return `Floor ≥ ${s.triggerValue ?? '?'} Ξ`;
+    case 'stop-loss':     return `Floor ≤ ${s.triggerValue ?? '?'} Ξ`;
+    case 'trailing-stop': return `Drops ${s.triggerValue ?? '?'}% from peak`;
+    default:              return '';
+  }
+}
+
+const BUY_TRIGGERS:  SniperTrigger[] = ['mint-live', 'floor-below', 'underpriced'];
+const SELL_TRIGGERS: SniperTrigger[] = ['take-profit', 'stop-loss', 'trailing-stop'];
+
+// triggers that need a numeric value, and whether that value is a % or Ξ
+const TRIGGER_UNIT: Partial<Record<SniperTrigger, 'eth' | 'pct'>> = {
+  'floor-below':   'eth',
+  'underpriced':   'pct',
+  'take-profit':   'eth',
+  'stop-loss':     'eth',
+  'trailing-stop': 'pct',
+};
 import Thumb from './Thumb';
 import { useWalletGate } from '../hooks/useWalletGate';
 import { toast } from './Toast';
@@ -47,7 +72,7 @@ export default function SniperView() {
       );
       writeSnipers(updated);
       setSnipers(updated);
-      toast(`🎯 Sniper hit · bought ${pick.quantity} ${pick.name}`);
+      toast(`🎯 Sniper hit · ${pick.side === 'sell' ? 'sold' : 'bought'} ${pick.quantity} ${pick.name}`);
     }, 20_000);
     return () => clearInterval(id);
   }, []);
@@ -63,7 +88,7 @@ export default function SniperView() {
   };
 
   const openNew = () => gate(() => setEditing({
-    quantity: 1, trigger: 'mint-live', gas: 'fast', network: 'ethereum',
+    side: 'buy', quantity: 1, trigger: 'mint-live', gas: 'fast', network: 'ethereum',
   }));
 
   const save = (draft: SniperT) => {
@@ -296,8 +321,19 @@ function SniperCard({
           {s.name.slice(0, 2).toUpperCase()}
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <span style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>{s.name}</span>
+            <span
+              style={{
+                fontSize: 9, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase',
+                padding: '1px 6px', borderRadius: 5,
+                background: s.side === 'sell' ? 'rgba(239,68,68,0.18)' : 'rgba(34,197,94,0.18)',
+                color: s.side === 'sell' ? 'var(--down)' : 'var(--up)',
+                fontFamily: 'var(--font-mono), monospace',
+              }}
+            >
+              {s.side}
+            </span>
             <span
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -313,11 +349,9 @@ function SniperCard({
             </span>
           </div>
           <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', fontFamily: 'var(--font-mono), monospace', marginTop: 3 }}>
-            {s.trigger === 'mint-live'
-              ? `Mint goes live`
-              : `Floor ≤ ${s.triggerValue ?? '?'} Ξ`}
+            {triggerSummary(s)}
             {' · '}
-            buy {s.quantity} @ ≤ {s.maxPrice} Ξ
+            {s.side === 'sell' ? 'sell' : 'buy'} {s.quantity} @ {s.side === 'sell' ? '≥' : '≤'} {s.maxPrice} Ξ
           </div>
         </div>
       </div>
@@ -367,12 +401,23 @@ function SniperForm({
   const [search, setSearch] = useState('');
   const [searching, setSearching] = useState(false);
   const [suggestions, setSuggestions] = useState<Collection[]>([]);
-  const [trigger, setTrigger] = useState<'mint-live' | 'floor-below'>(initial.trigger ?? 'floor-below');
+  const [side, setSide] = useState<SniperSide>(initial.side ?? 'buy');
+  const [trigger, setTrigger] = useState<SniperTrigger>(initial.trigger ?? 'mint-live');
   const [triggerValue, setTriggerValue] = useState<string>(initial.triggerValue?.toString() ?? '');
   const [maxPrice, setMaxPrice] = useState<string>(initial.maxPrice?.toString() ?? '');
   const [quantity, setQuantity] = useState<number>(initial.quantity ?? 1);
   const [gas, setGas] = useState<SniperT['gas']>(initial.gas ?? 'fast');
   const [network, setNetwork] = useState<SniperT['network']>(initial.network ?? 'ethereum');
+
+  const triggerUnit = TRIGGER_UNIT[trigger];           // 'eth' | 'pct' | undefined
+  const needsValue  = triggerUnit !== undefined;
+
+  // When the side flips, snap the trigger to that side's default.
+  const switchSide = (s: SniperSide) => {
+    setSide(s);
+    setTrigger(s === 'buy' ? 'mint-live' : 'take-profit');
+    setTriggerValue('');
+  };
 
   // Search results: curated + OpenSea fallback
   useEffect(() => {
@@ -403,11 +448,16 @@ function SniperForm({
   const pickTarget = async (c: Collection) => {
     const live = await fetchOpenSeaCollection(c);
     setTarget(live);
-    if (trigger === 'floor-below' && !triggerValue) {
-      setTriggerValue((live.floor * 0.95).toFixed(2));
+    // Sensible defaults seeded off the live floor.
+    if (needsValue && !triggerValue) {
+      if (trigger === 'floor-below')        setTriggerValue((live.floor * 0.9).toFixed(2));
+      else if (trigger === 'take-profit')   setTriggerValue((live.floor * 1.5).toFixed(2));
+      else if (trigger === 'stop-loss')     setTriggerValue((live.floor * 0.7).toFixed(2));
+      else if (trigger === 'underpriced')   setTriggerValue('10');
+      else if (trigger === 'trailing-stop') setTriggerValue('15');
     }
     if (!maxPrice) {
-      setMaxPrice((live.floor * 1.02).toFixed(2));
+      setMaxPrice((side === 'sell' ? live.floor * 0.98 : live.floor * 1.02).toFixed(2));
     }
     setStep('config');
   };
@@ -415,7 +465,7 @@ function SniperForm({
   const canSave =
     !!target &&
     parseFloat(maxPrice) > 0 &&
-    (trigger === 'mint-live' || parseFloat(triggerValue) > 0) &&
+    (!needsValue || parseFloat(triggerValue) > 0) &&
     quantity > 0;
 
   const submit = () => {
@@ -424,8 +474,9 @@ function SniperForm({
       id: Date.now().toString(),
       slug: target.slug,
       name: target.name,
+      side,
       trigger,
-      triggerValue: trigger === 'floor-below' ? parseFloat(triggerValue) : undefined,
+      triggerValue: needsValue ? parseFloat(triggerValue) : undefined,
       maxPrice: parseFloat(maxPrice),
       quantity,
       gas,
@@ -557,21 +608,33 @@ function SniperForm({
               </button>
             </div>
 
-            {/* Trigger */}
-            <Label>Trigger</Label>
+            {/* Side */}
+            <Label>Side</Label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 12 }}>
-              <Toggle active={trigger === 'mint-live'}     onClick={() => setTrigger('mint-live')}     label="Mint goes live" />
-              <Toggle active={trigger === 'floor-below'}   onClick={() => setTrigger('floor-below')}   label="Floor drops to" />
+              <Toggle active={side === 'buy'}  onClick={() => switchSide('buy')}  label="Buy / Snipe" />
+              <Toggle active={side === 'sell'} onClick={() => switchSide('sell')} label="Sell / Exit" />
             </div>
 
-            {trigger === 'floor-below' && (
+            {/* Trigger */}
+            <Label>Trigger</Label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, marginBottom: 12 }}>
+              {(side === 'buy' ? BUY_TRIGGERS : SELL_TRIGGERS).map(t => (
+                <Toggle key={t} active={trigger === t} onClick={() => { setTrigger(t); setTriggerValue(''); }} label={TRIGGER_LABEL[t]} />
+              ))}
+            </div>
+
+            {needsValue && (
               <>
-                <Label>Trigger floor (Ξ)</Label>
-                <NumInput value={triggerValue} onChange={setTriggerValue} placeholder="e.g. 39.50" />
+                <Label>{triggerUnit === 'pct' ? 'Threshold (%)' : 'Trigger floor (Ξ)'}</Label>
+                <NumInput
+                  value={triggerValue}
+                  onChange={setTriggerValue}
+                  placeholder={triggerUnit === 'pct' ? 'e.g. 15' : 'e.g. 39.50'}
+                />
               </>
             )}
 
-            <Label>Max price per item (Ξ)</Label>
+            <Label>{side === 'sell' ? 'Min accept per item (Ξ)' : 'Max price per item (Ξ)'}</Label>
             <NumInput value={maxPrice} onChange={setMaxPrice} placeholder="e.g. 42.00" />
 
             <Label>Quantity</Label>
@@ -621,8 +684,8 @@ function SniperForm({
             >
               <ShieldCheck size={14} style={{ color: 'var(--up)', flexShrink: 0, marginTop: 1 }} />
               <span>
-                When triggered, your wallet will be asked to sign the buy. Nothing
-                executes without your approval.
+                When triggered, your wallet signs the {side === 'sell' ? 'sale' : 'buy'}.
+                Nothing executes without your approval.
               </span>
             </div>
 
@@ -635,7 +698,7 @@ function SniperForm({
                 opacity: canSave ? 1 : 0.5, cursor: canSave ? 'pointer' : 'not-allowed',
               }}
             >
-              <span>Arm Sniper</span>
+              <span>Arm {side === 'sell' ? 'Sell' : 'Buy'} Sniper</span>
             </button>
           </>
         )}
